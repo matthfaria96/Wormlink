@@ -56,6 +56,10 @@ final class Transfer: Identifiable {
     /// Ao continuar depois de pausar, arquivos já completos são pulados e os parciais retomados.
     fileprivate var resuming = false
     fileprivate var pausing = false
+    /// O que o usuário escolheu para cada conflito na primeira passada (vale de novo ao continuar).
+    fileprivate let decisions = DecisionLog()
+    /// Cada execução tem um número: o fim atrasado de uma execução antiga não mexe no estado da nova.
+    fileprivate var run = 0
 
     func pause() {
         guard isActive else { return }
@@ -105,12 +109,23 @@ final class TransferQueue {
             let ask = ConflictPrompter.resolver(for: transfer.title)
             let resuming = transfer.resuming
             var copier = Copier(from: source, to: destination, skip: TransferSettings.skipRules,
-                                resolver: { item, existing in
-                                    // Continuando depois de pausar: completos ficam, parciais seguem de onde pararam.
-                                    if resuming, !item.isDirectory, let have = existing.size, let want = item.size {
-                                        return have == want ? .skip : (have < want ? .resume : .overwrite)
+                                resolver: { [decisions = transfer.decisions] item, existing in
+                                    if resuming, !item.isDirectory {
+                                        // Continuando: repete a escolha feita antes. Só o que esta transferência criou
+                                        // (ou mandou retomar) é medido pelo tamanho; um arquivo antigo nunca é "continuado".
+                                        switch decisions[item.path] {
+                                        case .overwrite?: return .overwrite
+                                        case .skip?: return .skip
+                                        case .rename?: return .rename
+                                        case .resume?, nil:
+                                            if let have = existing.size, let want = item.size {
+                                                return have == want ? .skip : (have < want ? .resume : .overwrite)
+                                            }
+                                        }
                                     }
-                                    return await ask(item, existing)
+                                    let action = await ask(item, existing)
+                                    decisions[item.path] = action
+                                    return action
                                 },
                                 preserveDates: TransferSettings.preserveDates)
             copier.atomicUploads = TransferSettings.atomicUploads
@@ -119,12 +134,18 @@ final class TransferQueue {
             for item in items { total += try await copier.totalSize(of: item) }
             transfer.total = total
             transfer.state = .running
-            for item in items {
-                try Task.checkCancellation()
-                transfer.detail = item.name
-                try await copier.copy(item, into: directory) { delta in
-                    Task { @MainActor in transfer.done += delta }
+            do {
+                for item in items {
+                    try Task.checkCancellation()
+                    transfer.detail = item.name
+                    try await copier.copy(item, into: directory) { delta in
+                        Task { @MainActor in transfer.done += delta }
+                    }
                 }
+            } catch {
+                // Pausada fica para continuar; falha ou cancelamento também avisam quem esperava (fechar conexões).
+                if !transfer.pausing { completion() }
+                throw error
             }
             // "Copiar URLs depois do envio" (Transmit): endereços públicos dos itens enviados.
             if let bookmark, kind == .upload, TransferSettings.copyURLsAfterUpload {
@@ -191,17 +212,25 @@ final class TransferQueue {
         let waiting = transfers.filter { $0.state == .waiting }.reversed()   // a mais antiga primeiro
         for transfer in waiting.prefix(max(0, TransferSettings.maxConcurrent - running)) {
             transfer.state = .preparing
-            transfer.pausing = false
             transfer.markStarted()
+            transfer.run += 1
+            let run = transfer.run, previous = transfer.task
             transfer.task = Task {
+                // A execução anterior (pausada ou cancelada) precisa terminar antes: nunca duas no mesmo arquivo.
+                await previous?.value
+                guard transfer.run == run else { return }
+                transfer.pausing = false
                 do {
                     try await transfer.job(transfer)
+                    guard transfer.run == run else { return }
                     transfer.done = max(transfer.done, transfer.total)
                     transfer.state = .finished
                     Notifier.transferFinished(transfer)
                 } catch is CancellationError {
+                    guard transfer.run == run else { return }
                     transfer.state = transfer.pausing ? .paused : .cancelled
                 } catch {
+                    guard transfer.run == run else { return }
                     transfer.state = transfer.pausing ? .paused : (Task.isCancelled ? .cancelled : .failed(error.localizedDescription))
                 }
                 ActiveTransfers.count = self.transfers.filter(\.isActive).count
@@ -265,5 +294,14 @@ nonisolated private final class ConflictMemory: @unchecked Sendable {
     var choice: ConflictAction? {
         get { lock.withLock { stored } }
         set { lock.withLock { stored = newValue } }
+    }
+}
+
+nonisolated final class DecisionLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var choices: [String: ConflictAction] = [:]
+    subscript(path: String) -> ConflictAction? {
+        get { lock.withLock { choices[path] } }
+        set { lock.withLock { choices[path] = newValue } }
     }
 }

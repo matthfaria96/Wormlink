@@ -15,6 +15,8 @@ final class TextDocument: Identifiable {
     var isSaving = false
     var error: String?
     var lastSaved: Date?
+    /// O download falhou: o texto vazio não é o arquivo e não pode ser salvo por cima dele.
+    var loadFailed = false
 
     static let maxSize: Int64 = 8 * 1024 * 1024
     static let encodings: [(String.Encoding, String)] = [
@@ -53,7 +55,9 @@ final class TextDocument: Identifiable {
                 text = String(decoding: data, as: UTF8.self)
             }
             savedText = text
+            loadFailed = false
         } catch {
+            loadFailed = true
             self.error = error.localizedDescription
         }
     }
@@ -69,6 +73,7 @@ final class TextDocument: Identifiable {
     }
 
     func save() async {
+        guard !loadFailed else { return }
         guard let data = text.data(using: encoding) else {
             let name = Self.encodings.first { $0.0 == encoding }?.1 ?? String(localized: "nesta codificação")
             error = String(localized: "O texto tem caracteres que não existem em \(name). Use UTF-8.")

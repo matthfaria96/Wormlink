@@ -69,7 +69,12 @@ final class AppModel {
 
     func remove(_ bookmark: Bookmark) {
         bookmarks.removeAll { $0.id == bookmark.id }
-        Keychain.deletePassword(for: bookmark)
+        // A senha fica no Chaves por servidor + usuário (formato do Cyberduck): só apaga se nenhum outro favorito usa.
+        let sharesPassword = bookmarks.contains {
+            Keychain.account(for: $0) == Keychain.account(for: bookmark) && $0.hostname == bookmark.hostname
+                && $0.port == bookmark.port && $0.connectionProtocol == bookmark.connectionProtocol
+        }
+        if !sharesPassword { Keychain.deletePassword(for: bookmark) }
         persist()
     }
 

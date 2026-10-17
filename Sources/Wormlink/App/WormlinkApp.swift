@@ -84,19 +84,19 @@ struct WormlinkCommands: Commands {
             .keyboardShortcut("k")
             Button("Desconectar") {
                 guard let window else { return }
-                Task { for slot in [window.left, window.right] { await window.disconnect(slot) } }
+                Task { for slot in [window.left, window.right] where slot.files?.isLocalConnection == false { await window.disconnect(slot) } }
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
             Divider()
-            Button("Nova Pasta…") { NotificationCenter.default.post(name: .wormlinkCreate, object: "folder") }
+            Button("Nova Pasta…") { NotificationCenter.default.post(name: .wormlinkCreate, object: files?.id, userInfo: ["kind": "folder"]) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(files == nil)
-            Button("Novo Arquivo…") { NotificationCenter.default.post(name: .wormlinkCreate, object: "file") }
+            Button("Novo Arquivo…") { NotificationCenter.default.post(name: .wormlinkCreate, object: files?.id, userInfo: ["kind": "file"]) }
                 .keyboardShortcut("n", modifiers: [.command, .option])
                 .disabled(files == nil)
-            Button("Novo Cofre Criptografado…") { NotificationCenter.default.post(name: .wormlinkNewVault, object: nil) }
+            Button("Novo Cofre Criptografado…") { NotificationCenter.default.post(name: .wormlinkNewVault, object: files?.id) }
                 .disabled(files == nil || files?.vault(at: files?.path ?? "/") != nil)
-            Button("Renomear…") { NotificationCenter.default.post(name: .wormlinkRename, object: nil) }
+            Button("Renomear…") { NotificationCenter.default.post(name: .wormlinkRename, object: files?.id) }
                 .disabled(files?.selection.isEmpty ?? true)
             Button("Obter Informações") { window?.showInspector.toggle() }
                 .keyboardShortcut("i")

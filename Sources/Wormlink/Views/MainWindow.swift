@@ -34,7 +34,10 @@ struct MainWindow: View {
             for slot in [model.left, model.right] { slot.files?.filter = slot.showingServers ? "" : model.search }
         }
         .focusedSceneValue(\.windowModel, model)
-        .background(WindowAccessor { window in TabOpener.attach(window) })
+        .background(WindowAccessor { window in
+            TabOpener.attach(window)
+            model.disconnectOnClose(window)
+        })
         .task {
             await app.refreshDisks()
             app.startBonjourIfEnabled()

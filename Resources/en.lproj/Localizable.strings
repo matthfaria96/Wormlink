@@ -600,3 +600,11 @@
 "chaves guardadas fora do cofre (Cryptomator Hub)" = "keys stored outside the vault (Cryptomator Hub)";
 "formato %lld" = "format %lld";
 "“%@” está danificado ou não pertence a este cofre." = "“%@” is damaged or doesn't belong to this vault.";
+
+/* Correções da auditoria */
+"Descartar" = "Discard";
+"Nomes com quebra de linha" = "Names with line breaks";
+"Não foi possível abrir “%@”" = "Couldn't open “%@”";
+"Salvar as alterações em “%@” no servidor?" = "Save the changes to “%@” on the server?";
+"Se não salvar, as alterações serão perdidas." = "If you don't save, your changes will be lost.";
+"a pasta “%@” já existe e não está vazia" = "the folder “%@” already exists and isn't empty";

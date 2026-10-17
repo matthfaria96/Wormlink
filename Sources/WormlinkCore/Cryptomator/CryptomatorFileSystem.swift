@@ -39,8 +39,12 @@ public final class CryptomatorFileSystem: FileSystem, @unchecked Sendable {
     /// Cria um cofre novo (formato 8) na pasta `root`, que não pode existir ainda.
     public static func create(_ inner: any FileSystem, at root: String, password: String,
                               scryptCost: Int = 32768) async throws -> CryptomatorFileSystem {
+        // S3, Azure e Swift "criam" pastas que já existem sem erro: escrever as chaves por cima destruiria outro cofre.
+        if let existing = try? await inner.list(root), !existing.isEmpty {
+            throw CryptomatorError.unsupportedVault(String(localized: "a pasta “\(RemotePath.name(root))” já existe e não está vazia"))
+        }
         let created = await Task.detached { CryptomatorVault.create(password: password, scryptCost: scryptCost) }.value
-        try await inner.createDirectory(root)
+        try? await inner.createDirectory(root)
         try await write(inner, created.masterkey, to: RemotePath.join(root, CryptomatorVault.masterkeyFile))
         try await write(inner, created.config, to: RemotePath.join(root, CryptomatorVault.configFile))
         let fs = CryptomatorFileSystem(inner: inner, root: root, vault: created.vault)
@@ -134,6 +138,11 @@ public final class CryptomatorFileSystem: FileSystem, @unchecked Sendable {
     public func createDirectory(_ path: String) async throws {
         guard contains(path), RemotePath.normalize(path) != root else { return try await inner.createDirectory(path) }
         let e = try await entry(for: path)
+        // Pasta já existente (nos serviços de objetos criar de novo não falha): reaproveita o ID dela.
+        if let data = try? await Self.read(inner, RemotePath.join(e.path, "dir.c9r")) {
+            lock.withLock { directoryIDs[RemotePath.normalize(path)] = String(decoding: data, as: UTF8.self) }
+            return
+        }
         let id = UUID().uuidString.lowercased()
         try await inner.createDirectory(e.path)
         if let long = e.long { try await Self.write(inner, Data(long.utf8), to: RemotePath.join(e.path, "name.c9s")) }
@@ -215,10 +224,18 @@ public final class CryptomatorFileSystem: FileSystem, @unchecked Sendable {
         let e = try await entry(for: path)
         let temp = Self.temporaryFile()
         defer { try? FileManager.default.removeItem(at: temp) }
-        let ratio = Double(CryptomatorVault.chunkSize) / Double(CryptomatorVault.chunkSize + 48)
+        let ratio = vault.cleartextRatio
         try await inner.download(contentPath(e), to: temp) { progress(Int64(Double($0) * ratio)) }
         let vault = vault, name = RemotePath.name(path)
-        try await Task.detached { try vault.decryptFile(temp, to: local, name: name) }.value
+        // Decifra num arquivo ao lado e só então troca: um bloco danificado não deixa um arquivo pela metade no lugar.
+        let plain = local.deletingLastPathComponent().appending(path: ".\(local.lastPathComponent).wormlink-cofre")
+        defer { try? FileManager.default.removeItem(at: plain) }
+        try await Task.detached { try vault.decryptFile(temp, to: plain, name: name) }.value
+        if FileManager.default.fileExists(atPath: local.path) {
+            _ = try FileManager.default.replaceItemAt(local, withItemAt: plain)
+        } else {
+            try FileManager.default.moveItem(at: plain, to: local)
+        }
     }
 
     public func upload(_ local: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
@@ -232,7 +249,7 @@ public final class CryptomatorFileSystem: FileSystem, @unchecked Sendable {
             try? await inner.createDirectory(e.path)
             try await Self.write(inner, Data(long.utf8), to: RemotePath.join(e.path, "name.c9s"))
         }
-        let ratio = Double(CryptomatorVault.chunkSize) / Double(CryptomatorVault.chunkSize + 48)
+        let ratio = vault.cleartextRatio
         try await inner.upload(temp, to: contentPath(e)) { progress(Int64(Double($0) * ratio)) }
     }
 

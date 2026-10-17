@@ -19,7 +19,7 @@ public final class GoogleDriveFileSystem: FileSystem {
 
     private func get(_ path: String, _ query: [String: String]) async throws -> [String: Any] {
         var c = URLComponents(url: Self.api.appending(path: path), resolvingAgainstBaseURL: false)!
-        c.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        c.setQuery(query.map { URLQueryItem(name: $0.key, value: $0.value) })
         let (data, response) = try await session.send(URLRequest(url: c.url!))
         return try cloudJSON(data, response)
     }

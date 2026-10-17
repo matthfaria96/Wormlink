@@ -120,7 +120,7 @@ public final class SwiftFileSystem: FileSystem {
         if let container { url.append(path: container) }
         if !object.isEmpty { url.append(path: object) }
         if !query.isEmpty, var c = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-            c.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+            c.setQuery(query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) })
             url = c.url ?? url
         }
         return url
@@ -192,8 +192,17 @@ public final class SwiftFileSystem: FileSystem {
     }
 
     private func allObjects(_ container: String, prefix: String) async throws -> [String] {
-        let (data, _) = try await send("GET", url(container: container, query: ["format": "json", "prefix": prefix, "limit": "10000"]))
-        return ((try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+        var names: [String] = []
+        var marker: String?
+        repeat {
+            var query = ["format": "json", "prefix": prefix, "limit": "10000"]
+            if let marker { query["marker"] = marker }
+            let (data, _) = try await send("GET", url(container: container, query: query))
+            let page = ((try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+            names += page
+            marker = page.count == 10_000 ? page.last : nil
+        } while marker != nil
+        return names
     }
 
     // MARK: Operações
@@ -296,5 +305,9 @@ public final class SwiftFileSystem: FileSystem {
         guard status == 201 else { throw WormlinkError.server(status: status, message: String(decoding: data.prefix(200), as: UTF8.self)) }
     }
 
-    public func disconnect() async { session.invalidateAndCancel() }
+    /// HTTP não tem sessão aberta para fechar. Invalidar aqui derrubaria o app: editor, fila e miniaturas
+    /// ainda usam este objeto depois que o painel desconecta (criar tarefa numa sessão invalidada é exceção).
+    public func disconnect() async {}
+
+    deinit { session.finishTasksAndInvalidate() }
 }

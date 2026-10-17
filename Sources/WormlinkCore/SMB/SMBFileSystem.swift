@@ -40,7 +40,8 @@ public final class SMBFileSystem: FileSystem, @unchecked Sendable {
         guard let folders = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return }
         for folder in folders {
             unmount(folder.path, MNT_FORCE)
-            try? FileManager.default.removeItem(at: folder)
+            // rmdir só apaga pasta vazia: se a desmontagem falhou, o compartilhamento continua intacto.
+            rmdir(folder.path)
         }
     }
 
@@ -85,13 +86,13 @@ public final class SMBFileSystem: FileSystem, @unchecked Sendable {
         }.value
         Transcript.log(title, "MOUNT \(url.absoluteString) → \(status)")
         if status == EEXIST, let existing = Self.existingMount(host: host, port: port, share: share) {
-            try? FileManager.default.removeItem(at: folder)
+            rmdir(folder.path)
             Transcript.log(title, "Já montado em \(existing.path)")
             lock.withLock { mounts[share] = existing; borrowed.insert(share) }
             return existing
         }
         guard status == 0 else {
-            try? FileManager.default.removeItem(at: folder)
+            rmdir(folder.path)
             // EAUTH (80) ou EACCES (13): usuário/senha.
             throw status == 80 || status == 13 || status == Int32(EAUTH) ? WormlinkError.authenticationFailed
                 : WormlinkError.server(status: Int(status), message: String(cString: strerror(status)))
@@ -227,7 +228,7 @@ public final class SMBFileSystem: FileSystem, @unchecked Sendable {
         }
         for folder in folders {
             try? await FileManager.default.unmountVolume(at: folder, options: [.withoutUI])
-            try? FileManager.default.removeItem(at: folder)
+            rmdir(folder.path)   // nunca removeItem: numa montagem ainda ativa ele apagaria o servidor
         }
     }
 

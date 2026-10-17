@@ -226,8 +226,18 @@ public final class AzureFileSystem: FileSystem {
         let children = try await allBlobs(container, prefix: blob + "/")
         let pairs = children.isEmpty ? [(blob, newBlob)] : children.map { ($0, newBlob + "/" + $0.dropFirst(blob.count + 1)) }
         for (from, to) in pairs {
-            try await send("PUT", container: newContainer, blob: to,
-                           headers: ["x-ms-copy-source": url(container: container, blob: from).absoluteString], expect: [202, 201])
+            let (_, copy) = try await send("PUT", container: newContainer, blob: to,
+                                           headers: ["x-ms-copy-source": url(container: container, blob: from).absoluteString], expect: [202, 201])
+            // A cópia pode ficar "pending" (blobs grandes, outra conta): a origem só sai quando o destino estiver pronto.
+            var status = copy.value(forHTTPHeaderField: "x-ms-copy-status") ?? "success"
+            while status == "pending" {
+                try await Task.sleep(for: .seconds(1))
+                let (_, head) = try await send("HEAD", container: newContainer, blob: to)
+                status = head.value(forHTTPHeaderField: "x-ms-copy-status") ?? "success"
+            }
+            guard status == "success" else {
+                throw WormlinkError.server(status: 500, message: "Copy Blob: \(status)")
+            }
             try await send("DELETE", container: container, blob: from, expect: [202])
         }
     }
@@ -308,7 +318,11 @@ public final class AzureFileSystem: FileSystem {
         try await send("PUT", container: container, blob: blob, query: ["comp": "blocklist"], body: Data(list.utf8), expect: [201])
     }
 
-    public func disconnect() async { session.invalidateAndCancel() }
+    /// HTTP não tem sessão aberta para fechar. Invalidar aqui derrubaria o app: editor, fila e miniaturas
+    /// ainda usam este objeto depois que o painel desconecta (criar tarefa numa sessão invalidada é exceção).
+    public func disconnect() async {}
+
+    deinit { session.finishTasksAndInvalidate() }
 }
 
 extension String {

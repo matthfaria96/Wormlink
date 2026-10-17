@@ -48,6 +48,14 @@ public final class FTPFileSystem: FileSystem {
             } catch WormlinkError.connectionClosed {
                 browser.connection = try await FTPConnection.open(config)
                 return try await body(browser.connection)
+            } catch let error as WormlinkError {
+                // Resposta do servidor lida normalmente: o canal segue em sincronia. Qualquer outra falha (tempo
+                // esgotado, conexão de dados caída) pode deixar uma resposta pendente; fecha para a próxima reabrir.
+                if case .server = error {} else if case .notFound = error {} else { await browser.connection.close() }
+                throw error
+            } catch {
+                await browser.connection.close()
+                throw error
             }
         }
     }

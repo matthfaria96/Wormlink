@@ -65,19 +65,21 @@ struct FilesPane: View {
             Button("OK", role: .cancel) {}
         } message: { Text(pane.operationError ?? "") }
         .onReceive(NotificationCenter.default.publisher(for: .wormlinkCreate)) { note in
-            guard isActive else { return }
-            newName = note.object as? String == "file" ? String(localized: "sem título.txt") : String(localized: "sem título")
-            creating = note.object as? String == "file" ? .file : .folder
+            // Só o painel em foco da janela em foco (o menu manda o id dele).
+            guard note.object as? UUID == pane.id else { return }
+            let isFile = note.userInfo?["kind"] as? String == "file"
+            newName = isFile ? String(localized: "sem título.txt") : String(localized: "sem título")
+            creating = isFile ? .file : .folder
         }
-        .onReceive(NotificationCenter.default.publisher(for: .wormlinkNewVault)) { _ in
-            if isActive { Task { await VaultPrompts.create(in: pane) } }
+        .onReceive(NotificationCenter.default.publisher(for: .wormlinkNewVault)) { note in
+            if note.object as? UUID == pane.id { Task { await VaultPrompts.create(in: pane) } }
         }
         .onReceive(NotificationCenter.default.publisher(for: .wormlinkCommand)) { note in
             if note.object as? UUID == pane.id { showCommand = true }
         }
         .sheet(isPresented: $showCommand) { CommandSheet(pane: pane) }
-        .onReceive(NotificationCenter.default.publisher(for: .wormlinkRename)) { _ in
-            guard isActive, let item = pane.selectedItems.first else { return }
+        .onReceive(NotificationCenter.default.publisher(for: .wormlinkRename)) { note in
+            guard note.object as? UUID == pane.id, let item = pane.selectedItems.first else { return }
             newName = item.name
             renaming = item
         }
@@ -628,11 +630,13 @@ enum Terminal {
             NSWorkspace.shared.open([URL(filePath: path)], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration())
             return
         }
-        let quoted = path.replacingOccurrences(of: "'", with: "'\\''")
+        // Tudo entre aspas simples: nome de pasta, host e usuário vêm do servidor/favorito e não podem virar comando.
+        func quote(_ text: String) -> String { "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'" }
         var command = "ssh"
         if bookmark.port != 22 { command += " -p \(bookmark.port)" }
-        if let key = bookmark.keyFile, !key.isEmpty { command += " -i '\(key)'" }
-        command += " -t \(bookmark.username.isEmpty ? "" : bookmark.username + "@")\(bookmark.hostname) \"cd '\(quoted)' && exec \\$SHELL -l\""
+        if let key = bookmark.keyFile, !key.isEmpty { command += " -i \(quote(key))" }
+        let destination = (bookmark.username.isEmpty ? "" : bookmark.username + "@") + bookmark.hostname
+        command += " -t -- \(quote(destination)) \(quote("cd \(quote(path)) && exec $SHELL -l"))"
         let script = URL.temporaryDirectory.appending(path: "Wormlink-\(UUID().uuidString).command")
         try? "#!/bin/sh\n\(command)\n".write(to: script, atomically: true, encoding: .utf8)
         try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)

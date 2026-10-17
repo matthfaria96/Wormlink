@@ -76,7 +76,8 @@ public struct CryptomatorVault: Sendable {
         let encKey = enc.withUnsafeBytes { Data($0) }, macKey = mac.withUnsafeBytes { Data($0) }
         var versionBytes = Data()
         withUnsafeBytes(of: UInt32(file.version).bigEndian) { versionBytes.append(contentsOf: $0) }
-        guard Data(HMAC<SHA256>.authenticationCode(for: versionBytes, using: SymmetricKey(data: macKey))) == Data(base64Flexible: file.versionMac) else {
+        guard let versionMac = Data(base64Flexible: file.versionMac),
+              equal(Data(HMAC<SHA256>.authenticationCode(for: versionBytes, using: SymmetricKey(data: macKey))), versionMac) else {
             throw CryptomatorError.damaged(masterkeyFile)
         }
 
@@ -150,8 +151,17 @@ public struct CryptomatorVault: Sendable {
 
     static func random(_ count: Int) -> Data {
         var bytes = [UInt8](repeating: 0, count: count)
-        _ = SecRandomCopyBytes(kSecRandomDefault, count, &bytes)
+        // Chaves e nonces zerados seriam catastróficos: melhor parar.
+        precondition(SecRandomCopyBytes(kSecRandomDefault, count, &bytes) == errSecSuccess, "gerador aleatório falhou")
         return Data(bytes)
+    }
+
+    /// Fração do tamanho cifrado que é conteúdo (para o progresso).
+    var cleartextRatio: Double { Double(Self.chunkSize) / Double(Self.chunkSize + chunkOverhead) }
+
+    /// Comparação em tempo constante para MACs.
+    static func equal(_ a: Data, _ b: Data) -> Bool {
+        a.count == b.count && zip(a, b).reduce(0) { $0 | ($1.0 ^ $1.1) } == 0
     }
 
     // MARK: Nomes e pastas
@@ -268,7 +278,7 @@ public struct CryptomatorVault: Sendable {
         case .ctrMac:
             headerNonce = header.prefix(16)
             let encrypted = header.subdata(in: 16..<56)
-            guard mac(headerNonce + encrypted) == header.subdata(in: 56..<88) else { throw CryptomatorError.damaged(name) }
+            guard Self.equal(mac(headerNonce + encrypted), header.subdata(in: 56..<88)) else { throw CryptomatorError.damaged(name) }
             payload = AESBlockCipher(key: encKey).ctr(iv: Array(headerNonce), encrypted)
         }
         let contentKey = payload.suffix(32)
@@ -313,7 +323,7 @@ public struct CryptomatorVault: Sendable {
             return plain
         case .ctrMac:
             let nonce = bytes.prefix(16), encrypted = bytes.subdata(in: 16..<bytes.count - 32)
-            guard mac(headerNonce + number + nonce + encrypted) == bytes.suffix(32) else { throw CryptomatorError.damaged(name) }
+            guard Self.equal(mac(headerNonce + number + nonce + encrypted), Data(bytes.suffix(32))) else { throw CryptomatorError.damaged(name) }
             return cipher.ctr(iv: Array(nonce), encrypted)
         }
     }

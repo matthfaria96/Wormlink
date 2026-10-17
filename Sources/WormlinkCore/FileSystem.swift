@@ -224,3 +224,11 @@ enum LocalAppend {
         try handle.truncate(atOffset: UInt64(offset))
     }
 }
+
+extension URLComponents {
+    /// Como `queryItems`, mas com "+" codificado: muitos servidores leem "+" literal como espaço.
+    mutating func setQuery(_ items: [URLQueryItem]) {
+        queryItems = items
+        percentEncodedQuery = percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+    }
+}

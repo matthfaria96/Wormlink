@@ -80,6 +80,7 @@ public struct Synchronizer: Sendable {
             }
             switch (item.isDirectory, other.isDirectory) {
             case (true, true):
+                if item.isSymlink { continue }   // links para pastas podem formar ciclos
                 try await walk(item.path, other.path, relative: rel, into: &changes, visiting: visiting)
             case (false, false):
                 if differs(item, other) { changes.append(SyncChange(relativePath: rel, kind: .update, source: item, destination: other)) }
@@ -89,7 +90,10 @@ public struct Synchronizer: Sendable {
             }
         }
         if options.deleteOrphans {
-            for orphan in destinationItems where !sourceNames.contains(orphan.name) {
+            // Destinos que ignoram maiúsculas (APFS, Dropbox, SMB…): "README.md" é o mesmo arquivo que "Readme.md",
+            // que já vai ser enviado por cima. Apagar o "órfão" apagaria o arquivo recém-enviado.
+            let foldedSource = Set(sourceNames.map { $0.lowercased() })
+            for orphan in destinationItems where !sourceNames.contains(orphan.name) && !foldedSource.contains(orphan.name.lowercased()) {
                 let rel = relative.isEmpty ? orphan.name : relative + "/" + orphan.name
                 changes.append(SyncChange(relativePath: rel, kind: .delete, source: nil, destination: orphan))
             }

@@ -123,7 +123,7 @@ public final class S3FileSystem: FileSystem {
     @discardableResult
     func send(_ method: String, bucket: String?, key: String = "", query: [String: String] = [:],
                       body: Data? = nil, headers: [String: String] = [:], expect: Set<Int> = [200, 204]) async throws -> (Data, HTTPURLResponse) {
-        var region = isAWS ? "us-east-1" : Self.region(forEndpoint: endpoint)
+        var region = Self.region(forEndpoint: endpoint)
         if let bucket { region = try await self.region(of: bucket) }
         var request = URLRequest(url: url(bucket: bucket, key: key, query: query, region: region))
         request.httpMethod = method
@@ -226,8 +226,13 @@ public final class S3FileSystem: FileSystem {
                 let objects = batch.map { "<Object><Key>\(S3XML.escape($0))</Key></Object>" }.joined()
                 let body = Data("<Delete><Quiet>true</Quiet>\(objects)</Delete>".utf8)
                 let md5 = Data(Insecure.MD5.hash(data: body)).base64EncodedString()
-                try await send("POST", bucket: bucket, query: ["delete": ""], body: body,
-                               headers: ["Content-MD5": md5, "Content-Type": "application/xml"])
+                let (reply, _) = try await send("POST", bucket: bucket, query: ["delete": ""], body: body,
+                                                headers: ["Content-MD5": md5, "Content-Type": "application/xml"])
+                // Em modo silencioso o 200 só lista o que falhou.
+                let nodes = S3XML.parse(reply)
+                if let failed = nodes.first(where: { $0.name == "Key" })?.text, nodes.contains(where: { $0.name == "Error" }) {
+                    throw WormlinkError.server(status: 200, message: (nodes.first { $0.name == "Message" }?.text ?? "") + " (\(failed))")
+                }
             }
             _ = try? await send("DELETE", bucket: bucket, key: key + "/")
         } else {
@@ -320,7 +325,10 @@ public final class S3FileSystem: FileSystem {
         if let type = Self.contentType(key) { initiate["Content-Type"] = type }
         let (data, _) = try await send("POST", bucket: bucket, key: key, query: ["uploads": ""], headers: initiate)
         guard let uploadId = S3XML.parse(data).first(where: { $0.name == "UploadId" })?.text else { throw WormlinkError.invalidResponse }
-        let parts = Int((size + Int64(Self.partSize) - 1) / Int64(Self.partSize))
+        // O S3 aceita no máximo 10.000 partes: arquivos enormes usam partes maiores (múltiplos de 1 MiB).
+        let mebibyte = 1024 * 1024
+        let partSize = max(Self.partSize, Int((size + 9_999) / 10_000 + Int64(mebibyte) - 1) / mebibyte * mebibyte)
+        let parts = Int((size + Int64(partSize) - 1) / Int64(partSize))
         let counter = ProgressSum(progress)
         do {
             var etags = [Int: String]()
@@ -332,8 +340,8 @@ public final class S3FileSystem: FileSystem {
                         group.addTask {
                             let reader = try FileHandle(forReadingFrom: local)
                             defer { try? reader.close() }
-                            try reader.seek(toOffset: UInt64(number - 1) * UInt64(Self.partSize))
-                            let chunk = try reader.read(upToCount: Self.partSize) ?? Data()
+                            try reader.seek(toOffset: UInt64(number - 1) * UInt64(partSize))
+                            let chunk = try reader.read(upToCount: partSize) ?? Data()
                             await BandwidthLimiter.shared.throttle(chunk.count, .upload)
                             let (_, response) = try await self.send("PUT", bucket: bucket, key: key,
                                                                     query: ["partNumber": "\(number)", "uploadId": uploadId], body: chunk)
@@ -349,7 +357,8 @@ public final class S3FileSystem: FileSystem {
             }.joined() + "</CompleteMultipartUpload>"
             try await send("POST", bucket: bucket, key: key, query: ["uploadId": uploadId], body: Data(body.utf8))
         } catch {
-            _ = try? await send("DELETE", bucket: bucket, key: key, query: ["uploadId": uploadId])
+            // Fora da tarefa cancelada, senão o URLSession cancela o próprio pedido de abortar.
+            await Task.detached { _ = try? await self.send("DELETE", bucket: bucket, key: key, query: ["uploadId": uploadId]) }.value
             throw error
         }
     }
@@ -360,12 +369,19 @@ public final class S3FileSystem: FileSystem {
     public func remoteChecksum(_ path: String) async throws -> Checksum? {
         guard let (bucket, key) = split(path), !key.isEmpty else { return nil }
         let (_, response) = try await send("HEAD", bucket: bucket, key: key)
+        // Com SSE-KMS ou SSE-C o ETag não é o MD5 do conteúdo.
+        if response.value(forHTTPHeaderField: "x-amz-server-side-encryption")?.hasPrefix("aws:kms") == true
+            || response.value(forHTTPHeaderField: "x-amz-server-side-encryption-customer-algorithm") != nil { return nil }
         guard let etag = response.value(forHTTPHeaderField: "ETag")?.trimmingCharacters(in: CharacterSet(charactersIn: "\"")),
               etag.count == 32, !etag.contains("-") else { return nil }
         return Checksum(.md5, etag)
     }
 
-    public func disconnect() async { session.invalidateAndCancel() }
+    /// HTTP não tem sessão aberta para fechar. Invalidar aqui derrubaria o app: editor, fila e miniaturas
+    /// ainda usam este objeto depois que o painel desconecta (criar tarefa numa sessão invalidada é exceção).
+    public func disconnect() async {}
+
+    deinit { session.finishTasksAndInvalidate() }
 }
 
 // MARK: - Apoio
@@ -445,7 +461,7 @@ enum S3XML {
 
         func parser(_ parser: XMLParser, didEndElement name: String, namespaceURI: String?, qualifiedName: String?) {
             if !S3XML.groupNames.contains(name) {
-                nodes.append(Node(name: name, path: stack.joined(separator: "/"), text: text.trimmingCharacters(in: .whitespacesAndNewlines)))
+                nodes.append(Node(name: name, path: stack.joined(separator: "/"), text: text.allSatisfy(\.isWhitespace) ? "" : text))  // nomes podem começar ou terminar com espaço
             }
             stack.removeLast()
             text = ""

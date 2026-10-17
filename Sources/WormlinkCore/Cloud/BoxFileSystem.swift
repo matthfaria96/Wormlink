@@ -167,8 +167,17 @@ public final class BoxFileSystem: FileSystem {
         commit.httpMethod = "POST"
         commit.setValue("application/json", forHTTPHeaderField: "Content-Type")
         commit.setValue("sha=\(Data(whole.finalize()).base64EncodedString())", forHTTPHeaderField: "Digest")
-        let (data, response) = try await session.send(commit, body: try JSONSerialization.data(withJSONObject: ["parts": parts]))
-        _ = try cloudJSON(data, response, expect: [201])
+        let body = try JSONSerialization.data(withJSONObject: ["parts": parts])
+        // 202: o Box ainda está juntando as partes; tenta de novo depois do Retry-After.
+        for _ in 0..<30 {
+            let (data, response) = try await session.send(commit, body: body)
+            guard response.statusCode == 202 else {
+                _ = try cloudJSON(data, response, expect: [201])
+                return
+            }
+            try await Task.sleep(for: .seconds(Double(response.value(forHTTPHeaderField: "Retry-After") ?? "") ?? 2))
+        }
+        throw WormlinkError.timedOut
     }
 
     public func disconnect() async {}

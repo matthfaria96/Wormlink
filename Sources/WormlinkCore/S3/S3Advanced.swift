@@ -227,8 +227,18 @@ extension S3FileSystem {
     }
 
     public func setLifecycle(_ bucket: String, _ lifecycle: S3Lifecycle) async throws {
+        // Mexe só na regra "Wormlink": as outras (console, Terraform…) continuam como estão.
+        let current = (try? await send("GET", bucket: bucket, query: ["lifecycle": ""]))?.0 ?? Data()
+        let others = String(decoding: current, as: UTF8.self).matches(of: /<Rule>.*?<\/Rule>/.dotMatchesNewlines())
+            .map { String($0.output) }
+            .filter { !$0.contains("<ID>Wormlink</ID>") }
         guard !lifecycle.isEmpty else {
-            try await send("DELETE", bucket: bucket, query: ["lifecycle": ""])
+            if others.isEmpty {
+                try await send("DELETE", bucket: bucket, query: ["lifecycle": ""])
+            } else {
+                try await sendXML("PUT", bucket: bucket, query: ["lifecycle": ""],
+                                  "<LifecycleConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\(others.joined())</LifecycleConfiguration>")
+            }
             return
         }
         var rule = "<Rule><ID>Wormlink</ID><Filter><Prefix></Prefix></Filter><Status>Enabled</Status>"
@@ -238,7 +248,7 @@ extension S3FileSystem {
         if let days = lifecycle.expirationDays { rule += "<Expiration><Days>\(days)</Days></Expiration>" }
         rule += "</Rule>"
         try await sendXML("PUT", bucket: bucket, query: ["lifecycle": ""],
-                          "<LifecycleConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\(rule)</LifecycleConfiguration>")
+                          "<LifecycleConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\(others.joined())\(rule)</LifecycleConfiguration>")
     }
 
     /// A primeira regra ativa: dias e classe da transição, dias da expiração.

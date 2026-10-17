@@ -28,7 +28,13 @@ struct FTPConfig: Sendable {
     var asciiExtensions: Set<String> = []
 
     func isASCII(_ path: String) -> Bool {
-        !asciiExtensions.isEmpty && asciiExtensions.contains((path as NSString).pathExtension.lowercased())
+        guard !asciiExtensions.isEmpty else { return false }
+        // O envio atômico usa ".nome.txt.wormlink-part": vale a extensão do nome final.
+        var name = (path as NSString).lastPathComponent
+        if name.hasSuffix(".wormlink-part"), name.hasPrefix(".") { name = String(name.dropFirst().dropLast(".wormlink-part".count)) }
+        let ext = (name as NSString).pathExtension.lowercased()
+        // ".htaccess" não tem extensão para o Foundation: o nome todo conta.
+        return asciiExtensions.contains(ext.isEmpty && name.hasPrefix(".") ? String(name.dropFirst()).lowercased() : ext)
     }
 
     func tlsHandler(context: NIOSSLContext) throws -> NIOSSLClientHandler {
@@ -128,6 +134,10 @@ final class FTPConnection: @unchecked Sendable {
     }
 
     func send(_ line: String) async throws {
+        // CR/LF num nome de arquivo viraria um segundo comando (ex.: "x\r\nDELE /importante").
+        guard !line.contains(where: { $0 == "\r" || $0 == "\n" }) else {
+            throw WormlinkError.unsupportedOperation(String(localized: "Nomes com quebra de linha"))
+        }
         Transcript.log(config.host, line.hasPrefix("PASS ") ? "PASS ••••••" : line)
         var buffer = channel.allocator.buffer(capacity: line.utf8.count + 2)
         buffer.writeBytes(line.data(using: config.encoding, allowLossyConversion: true) ?? Data(line.utf8))

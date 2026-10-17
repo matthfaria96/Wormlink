@@ -28,7 +28,10 @@ final class PaneModel: Identifiable {
     private(set) var vaults: [CryptomatorFileSystem] = []
     /// Pasta atual é um cofre do Cryptomator ainda trancado.
     private(set) var lockedVault: String?
-    var fs: any FileSystem { vault(at: path) ?? base }
+    var fs: any FileSystem { fs(for: path) }
+    func fs(for path: String) -> any FileSystem { vault(at: path) ?? base }
+    /// Cada listagem leva um número: uma resposta atrasada de outra pasta é descartada.
+    private var loadGeneration = 0
     let bookmark: Bookmark?
     private(set) var path: String
     private(set) var items: [FileItem] = []
@@ -53,6 +56,7 @@ final class PaneModel: Identifiable {
     private(set) var isSearching = false
     private(set) var searchFolder: String?
     private var searchTask: Task<Void, Never>?
+    private var searchGeneration = 0
     /// Chamado a cada mudança de pasta feita pelo usuário (Folder Linking).
     var onNavigate: ((String) -> Void)?
 
@@ -131,16 +135,24 @@ final class PaneModel: Identifiable {
     }
 
     func reload() async {
+        loadGeneration += 1
+        let generation = loadGeneration, folder = path
         isLoading = true
-        defer { isLoading = false }
+        defer { if generation == loadGeneration { isLoading = false } }
         do {
-            items = try await fs.list(path)
-            for folder in expanded { children[folder] = try? await fs.list(folder) }
-            lockedVault = vault(at: path) == nil && CryptomatorFileSystem.isVault(items) ? path : nil
+            let listed = try await fs(for: folder).list(folder)
+            var kids: [String: [FileItem]] = [:]
+            for open in expanded { kids[open] = try? await fs(for: open).list(open) }
+            guard generation == loadGeneration else { return }
+            items = listed
+            children.merge(kids) { $1 }
+            lockedVault = vault(at: folder) == nil && CryptomatorFileSystem.isVault(listed) ? folder : nil
             error = nil
             selection.formIntersection(rows.map(\.id))
         } catch {
+            guard generation == loadGeneration else { return }
             items = []
+            lockedVault = nil
             self.error = error.localizedDescription
         }
     }
@@ -174,7 +186,7 @@ final class PaneModel: Identifiable {
         if expanded.remove(item.path) != nil { return }
         expanded.insert(item.path)
         if children[item.path] == nil {
-            do { children[item.path] = try await fs.list(item.path) } catch {
+            do { children[item.path] = try await fs(for: item.path).list(item.path) } catch {
                 expanded.remove(item.path)
                 operationError = error.localizedDescription
             }
@@ -190,11 +202,18 @@ final class PaneModel: Identifiable {
         isSearching = true
         searchFolder = path
         let fs = fs, root = path
+        searchGeneration += 1
+        let generation = searchGeneration
         searchTask = Task { [weak self] in
             try? await RemoteSearch.run(fs, from: root, matching: query, skip: TransferSettings.skipRules,
-                                        found: { hits in Task { @MainActor in self?.searchResults?.append(contentsOf: hits) } },
-                                        visiting: { folder in Task { @MainActor in self?.searchFolder = folder } })
-            self?.isSearching = false
+                                        found: { hits in Task { @MainActor in
+                                            guard self?.searchGeneration == generation else { return }
+                                            self?.searchResults?.append(contentsOf: hits)
+                                        } },
+                                        visiting: { folder in Task { @MainActor in
+                                            if self?.searchGeneration == generation { self?.searchFolder = folder }
+                                        } })
+            if self?.searchGeneration == generation { self?.isSearching = false }
         }
     }
 

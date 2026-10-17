@@ -61,6 +61,7 @@ public struct Copier: Sendable {
     public func totalSize(of item: FileItem) async throws -> Int64 {
         guard !skip.skips(item.name) else { return 0 }
         guard item.isDirectory else { return item.size ?? 0 }
+        guard !item.isSymlink else { return 0 }   // link para pasta: seguir pode entrar em ciclo (ln -s .. volta)
         var total: Int64 = 0
         for child in try await source.list(item.path) { total += try await totalSize(of: child) }
         return total
@@ -71,6 +72,7 @@ public struct Copier: Sendable {
     public func copy(_ item: FileItem, into directory: String, existing: [FileItem]? = nil,
                      progress: @escaping @Sendable (Int64) -> Void) async throws {
         guard !skip.skips(item.name) else { return }
+        if item.isDirectory && item.isSymlink { return }   // não segue links para pastas (evita ciclos)
         let siblings: [FileItem]
         if let existing { siblings = existing } else { siblings = (try? await destination.list(directory)) ?? [] }
         // Nomes do Mac podem estar decompostos (NFD); servidores (Linux, S3, Azure) comparam bytes, então
@@ -117,12 +119,23 @@ public struct Copier: Sendable {
             let temporary = RemotePath.join(directory, ".\(RemotePath.name(target)).wormlink-part")
             try await transfer(item, to: temporary, offset: 0, progress: progress)
             do {
-                // Muitos servidores (SFTP v3) não renomeiam por cima: o antigo sai só agora, já com o novo pronto.
-                if let old = siblings.first(where: { $0.path == target }), !old.isDirectory { try await destination.delete(old) }
                 try await destination.move(temporary, to: target)
             } catch {
-                try? await destination.delete(FileItem(path: temporary, isDirectory: false))
-                throw error
+                guard let old = siblings.first(where: { $0.path == target }), !old.isDirectory else {
+                    try? await destination.delete(FileItem(path: temporary, isDirectory: false))
+                    throw error
+                }
+                // Muitos servidores (SFTP v3) não renomeiam por cima. O antigo vira reserva e só sai com o novo no
+                // lugar; se algo falhar, o antigo volta e o novo continua no .wormlink-part. Nunca os dois somem.
+                let backup = RemotePath.join(directory, ".\(RemotePath.name(target)).wormlink-old")
+                try await destination.move(target, to: backup)
+                do {
+                    try await destination.move(temporary, to: target)
+                } catch {
+                    try? await destination.move(backup, to: target)
+                    throw error
+                }
+                try? await destination.delete(FileItem(path: backup, isDirectory: false))
             }
         } else {
             try await transfer(item, to: target, offset: offset, progress: progress)

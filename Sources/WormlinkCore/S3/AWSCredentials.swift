@@ -117,7 +117,8 @@ actor AWSCredentials {
                                             mfaSerial: mfaSerial, code: code, duration: duration)
         }
         let (signer, expires) = try await assume()
-        return AWSCredentials(signer: signer, expires: expires, refresh: mfaSerial == nil ? assume : nil)
+        // Com MFA a renovação pede um código novo (como a AWS CLI); sem ela tudo falharia depois de uma hora.
+        return AWSCredentials(signer: signer, expires: expires, refresh: assume)
     }
 }
 

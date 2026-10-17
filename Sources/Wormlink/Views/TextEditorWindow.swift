@@ -22,6 +22,14 @@ struct TextEditorWindow: View {
         VStack(spacing: 0) {
             if document.isLoading {
                 ProgressView("Abrindo “\(document.name)”…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if document.loadFailed {
+                ContentUnavailableView {
+                    Label("Não foi possível abrir “\(document.name)”", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(document.error ?? "")
+                } actions: {
+                    Button("Tentar de Novo") { Task { await document.load() } }
+                }
             } else {
                 TextEditor(text: $document.text)
                     .font(.system(size: fontSize, design: .monospaced))
@@ -63,11 +71,26 @@ struct TextEditorWindow: View {
                     if document.isSaving { ProgressView().controlSize(.small) } else { Label("Salvar", systemImage: "square.and.arrow.up") }
                 }
                 .keyboardShortcut("s")
-                .disabled(!document.isDirty || document.isSaving)
+                .disabled(!document.isDirty || document.isSaving || document.loadFailed)
                 .help("Salvar no servidor (⌘S)")
             }
         }
         .task { if document.text.isEmpty && document.isLoading { await document.load() } }
-        .onDisappear { if !document.isDirty { app.textDocuments[id] = nil } }
+        .onDisappear {
+            // Fechar com alterações não salvas: pergunta antes de jogar o texto fora.
+            if document.isDirty && !document.loadFailed && Self.askToSave(document.name) {
+                Task { await document.save() }
+            }
+            app.textDocuments[id] = nil
+        }
+    }
+
+    private static func askToSave(_ name: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Salvar as alterações em “\(name)” no servidor?")
+        alert.informativeText = String(localized: "Se não salvar, as alterações serão perdidas.")
+        alert.addButton(withTitle: String(localized: "Salvar"))
+        alert.addButton(withTitle: String(localized: "Descartar"))
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }

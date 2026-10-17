@@ -52,6 +52,20 @@ struct PasswordRequest: Identifiable {
 final class WindowModel {
     enum Side { case left, right }
 
+    @ObservationIgnored private var closeObserver: NSObjectProtocol?
+
+    /// Fechar a janela (ou a aba) encerra as conexões dela; senão SSH/FTP ficam abertos até sair do app.
+    func disconnectOnClose(_ window: NSWindow) {
+        guard closeObserver == nil else { return }
+        closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let connections = [self.left, self.right].compactMap(\.files).filter { !$0.isLocalConnection }.map(\.base)
+                Task { for connection in connections { await connection.disconnect() } }
+            }
+        }
+    }
+
     let left: PaneSlot
     let right: PaneSlot
     var active: Side = .left
@@ -129,6 +143,11 @@ final class WindowModel {
     func submitPassword(in slot: PaneSlot, app: AppModel) {
         guard let request = slot.passwordRequest else { return }
         slot.passwordRequest = nil
+        // O usuário digitado no pedido de senha passa a fazer parte do favorito salvo.
+        if var saved = app.bookmark(id: request.bookmark.id), saved.username != request.bookmark.username {
+            saved.username = request.bookmark.username
+            app.save(saved)
+        }
         if request.remember, app.bookmark(id: request.bookmark.id) != nil {
             Keychain.setPassword(request.password, for: request.bookmark)
         }

@@ -101,7 +101,7 @@ struct ColumnBrowser: View {
 
     private func load(_ folder: String) async {
         do {
-            listings[folder] = try await pane.fs.list(folder)
+            listings[folder] = try await pane.fs(for: folder).list(folder)
             failed[folder] = nil
         } catch {
             failed[folder] = error.localizedDescription

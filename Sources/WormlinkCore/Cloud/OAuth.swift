@@ -96,7 +96,7 @@ public enum OAuthFlow {
             "scope": provider.scopes.joined(separator: " "),
         ]
         provider.extraAuthorizeParameters.forEach { query[$0.key] = $0.value }
-        c.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        c.setQuery(query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) })
 
         let receiver = try LoopbackReceiver(port: OAuthProvider.redirectPort)
         await open(c.url!)

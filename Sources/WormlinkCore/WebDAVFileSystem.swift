@@ -108,7 +108,11 @@ public final class WebDAVFileSystem: FileSystem {
         try check(response, expect: [200, 201, 204], body: data)
     }
 
-    public func disconnect() async { session.invalidateAndCancel() }
+    /// HTTP não tem sessão aberta para fechar. Invalidar aqui derrubaria o app: editor, fila e miniaturas
+    /// ainda usam este objeto depois que o painel desconecta (criar tarefa numa sessão invalidada é exceção).
+    public func disconnect() async {}
+
+    deinit { session.finishTasksAndInvalidate() }
 
     // MARK: HTTP
 

@@ -87,19 +87,29 @@ public enum SSHKeyManager {
         try? await fs.setPermissions(folder, mode: 0o700)
         let temp = FileManager.default.temporaryDirectory.appending(path: "wormlink-authorized-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: temp) }
-        let exists = (try? await fs.list(folder))?.contains { $0.path == RemotePath.normalize(path) } ?? false
+        // Sem conseguir ler o arquivo atual, não escreve: gravar só a chave nova apagaria as outras.
+        let exists = try await fs.list(folder).contains { !$0.isDirectory && $0.name == RemotePath.name(path) }
         var text = ""
         if exists {
             try await fs.download(path, to: temp) { _ in }
-            text = (try? String(contentsOf: temp, encoding: .utf8)) ?? ""
+            text = try String(contentsOf: temp, encoding: .utf8)
         }
         let blob = publicKey.split(separator: " ").dropFirst().first.map(String.init) ?? publicKey
         guard !text.split(whereSeparator: \.isNewline).contains(where: { $0.contains(blob) }) else { return }   // já instalada
         if !text.isEmpty, !text.hasSuffix("\n") { text += "\n" }
         text += publicKey.trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
         try text.write(to: temp, atomically: true, encoding: .utf8)
-        try await fs.upload(temp, to: path) { _ in }
-        try? await fs.setPermissions(path, mode: 0o600)
+        // Grava ao lado e troca no fim: uma queda no meio não deixa o authorized_keys pela metade.
+        let staged = path + ".wormlink-new"
+        try await fs.upload(temp, to: staged) { _ in }
+        try? await fs.setPermissions(staged, mode: 0o600)
+        do {
+            try await fs.move(staged, to: path)
+        } catch {
+            // SFTP v3 não renomeia por cima.
+            try await fs.delete(FileItem(path: path, isDirectory: false))
+            try await fs.move(staged, to: path)
+        }
     }
 
     @discardableResult

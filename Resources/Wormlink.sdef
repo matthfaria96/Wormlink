@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary title="Wormlink" xmlns:xi="http://www.w3.org/2003/XInclude">
+    <xi:include href="file:///System/Library/ScriptingDefinitions/CocoaStandard.sdef" xpointer="xpointer(/dictionary/suite)"/>
+
+    <suite name="Wormlink" code="WmLk" description="Servidores e transferências do Wormlink.">
+        <command name="server names" code="WmLkSrvN" description="Nomes dos servidores salvos no Wormlink.">
+            <cocoa class="WormlinkServerNamesCommand"/>
+            <result description="Os nomes, em ordem alfabética.">
+                <type type="text" list="yes"/>
+            </result>
+        </command>
+
+        <command name="connect" code="WmLkConn" description="Abre um servidor salvo na janela da frente do Wormlink.">
+            <cocoa class="WormlinkConnectCommand"/>
+            <direct-parameter type="text" description="Nome do servidor."/>
+        </command>
+
+        <command name="list" code="WmLkList" description="Nomes dos itens de uma pasta remota (pastas terminam com “/”).">
+            <cocoa class="WormlinkListCommand"/>
+            <direct-parameter type="text" optional="yes" description="Caminho remoto (padrão: a pasta inicial do servidor)."/>
+            <parameter name="on" code="Srvr" type="text" description="Nome do servidor.">
+                <cocoa key="server"/>
+            </parameter>
+            <result description="Os nomes.">
+                <type type="text" list="yes"/>
+            </result>
+        </command>
+
+        <command name="upload" code="WmLkUpld" description="Envia arquivos ou pastas para um servidor salvo e espera terminar.">
+            <cocoa class="WormlinkUploadCommand"/>
+            <direct-parameter description="Arquivos ou pastas a enviar.">
+                <type type="file" list="yes"/>
+                <type type="file"/>
+            </direct-parameter>
+            <parameter name="to" code="Srvr" type="text" description="Nome do servidor.">
+                <cocoa key="server"/>
+            </parameter>
+            <parameter name="into" code="Path" type="text" optional="yes" description="Pasta remota (padrão: a pasta inicial do servidor).">
+                <cocoa key="path"/>
+            </parameter>
+        </command>
+
+        <command name="download" code="WmLkDnld" description="Baixa um arquivo ou pasta de um servidor salvo e espera terminar.">
+            <cocoa class="WormlinkDownloadCommand"/>
+            <direct-parameter type="text" description="Caminho remoto (relativo à pasta inicial ou começando com “/”)."/>
+            <parameter name="from" code="Srvr" type="text" description="Nome do servidor.">
+                <cocoa key="server"/>
+            </parameter>
+            <parameter name="to" code="Dest" type="file" description="Pasta local onde salvar.">
+                <cocoa key="destination"/>
+            </parameter>
+        </command>
+    </suite>
+</dictionary>

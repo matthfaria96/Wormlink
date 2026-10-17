@@ -1,0 +1,139 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.15686,0.13333,0.33725,1.00000",
+          "display-p3:0.05098,0.04706,0.14118,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 1
+          }
+        }
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "display-p3:0.07451,0.06667,0.15686,1.00000",
+          "display-p3:0.01961,0.01961,0.05098,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 1
+          }
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Faíscas",
+      "layers": [
+        {
+          "name": "sparks",
+          "image-name": "sparks.png",
+          "glass": false,
+          "blend-mode": "plus-lighter"
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "name": "Portais",
+      "layers": [
+        {
+          "name": "portals",
+          "image-name": "portals.png",
+          "glass": true
+        },
+        {
+          "name": "portals-swirl",
+          "image-name": "portals-swirl.png",
+          "glass": false,
+          "blend-mode": "plus-lighter"
+        }
+      ],
+      "lighting": "combined",
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    },
+    {
+      "name": "Túnel",
+      "layers": [
+        {
+          "name": "tunnel-flow",
+          "image-name": "tunnel-flow.png",
+          "glass": false,
+          "blend-mode": "plus-lighter"
+        },
+        {
+          "name": "tunnel-body",
+          "image-name": "tunnel-body.png",
+          "glass": true
+        }
+      ],
+      "lighting": "combined",
+      "shadow": {
+        "kind": "layer-color",
+        "opacity": 0.35
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
+    },
+    {
+      "name": "Nebulosa",
+      "layers": [
+        {
+          "name": "nebula",
+          "image-name": "nebula.png",
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

@@ -202,6 +202,8 @@ final class FTPConnection: @unchecked Sendable {
                 channel.eventLoop.makeCompletedFuture {
                     sink.expectsTLS = tls != nil
                     if let tls { try channel.pipeline.syncOperations.addHandler(config.tlsHandler(context: tls)) }
+                    // Conexão de dados parada (servidor travado, rede caída sem RST): desiste em vez de esperar para sempre.
+                    try channel.pipeline.syncOperations.addHandler(IdleStateHandler(allTimeout: FTPDataSink.stallTimeout))
                     try channel.pipeline.syncOperations.addHandler(sink)
                 }
             }
@@ -432,8 +434,15 @@ final class FTPDataSink: ChannelInboundHandler, @unchecked Sendable {
     /// Conclui quando o TLS está pronto (ou imediatamente, sem TLS).
     var handshake: EventLoopFuture<Void> { handshakePromise!.futureResult }
 
+    static let stallTimeout = TimeAmount.seconds(60)
+
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         if let tls = event as? TLSUserEvent, case .handshakeCompleted = tls { handshakePromise?.succeed() }
+        if event is IdleStateHandler.IdleStateEvent {
+            complete(.failure(WormlinkError.timedOut))
+            context.close(promise: nil)
+            return
+        }
         context.fireUserInboundEventTriggered(event)
     }
 

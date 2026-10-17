@@ -33,7 +33,7 @@ public final class SSHAgent: @unchecked Sendable {
     }
 
     public func identities() throws -> [Identity] {
-        var reply = try request(.requestIdentities, payload: Data())
+        var reply = try request(.requestIdentities, payload: Data(), timeout: 10)
         guard reply.type == Message.identitiesAnswer.rawValue else { throw WormlinkError.invalidResponse }
         let count = try reply.body.readUInt32()
         var result: [Identity] = []
@@ -53,18 +53,24 @@ public final class SSHAgent: @unchecked Sendable {
         payload.appendString(identity.blob)
         payload.appendString(data)
         payload.appendUInt32(identity.type == "ssh-rsa" ? Self.rsaSHA512Flag : 0)
-        var reply = try request(.signRequest, payload: payload)
+        // Agentes como 1Password/Secretive esperam o Touch ID: tempo generoso, mas nunca infinito.
+        var reply = try request(.signRequest, payload: payload, timeout: 60)
         guard reply.type == Message.signResponse.rawValue else { throw WormlinkError.authenticationFailed }
         var signature = try reply.body.readString()
         let format = String(decoding: try signature.readString(), as: UTF8.self)
         return (format, try signature.readString())
     }
 
-    private func request(_ type: Message, payload: Data) throws -> (type: UInt8, body: Data) {
+    /// `timeout` em segundos: um agente que não responde não pode prender a conexão para sempre
+    /// (a assinatura roda dentro do event loop do NIO, que é síncrono aqui).
+    private func request(_ type: Message, payload: Data, timeout: Int) throws -> (type: UInt8, body: Data) {
         try lock.withLock {
             let fd = socket(AF_UNIX, SOCK_STREAM, 0)
             guard fd >= 0 else { throw WormlinkError.connectionClosed }
             defer { close(fd) }
+            var limit = timeval(tv_sec: timeout, tv_usec: 0)
+            setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &limit, socklen_t(MemoryLayout<timeval>.size))
+            setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &limit, socklen_t(MemoryLayout<timeval>.size))
             var address = sockaddr_un()
             address.sun_family = sa_family_t(AF_UNIX)
             let path = Array(socketPath.utf8CString)
@@ -107,6 +113,7 @@ public final class SSHAgent: @unchecked Sendable {
         try data.withUnsafeMutableBytes { raw in
             while offset < count {
                 let n = read(fd, raw.baseAddress! + offset, count - offset)
+                if n < 0, errno == EAGAIN || errno == EWOULDBLOCK { throw WormlinkError.timedOut }
                 guard n > 0 else { throw WormlinkError.connectionClosed }
                 offset += n
             }

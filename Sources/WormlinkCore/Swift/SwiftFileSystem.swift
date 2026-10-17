@@ -228,7 +228,12 @@ public final class SwiftFileSystem: FileSystem {
             try await send("DELETE", url(container: container, object: object + "/"), expect: [204, 404])
             try await send("DELETE", url(container: container, object: object), expect: [204, 404])
         } else {
-            try await send("DELETE", url(container: container, object: object), expect: [204])
+            let (_, head) = try await send("HEAD", url(container: container, object: object), expect: [200, 204])
+            if head.value(forHTTPHeaderField: "X-Static-Large-Object")?.lowercased() == "true" {
+                try await send("DELETE", url(container: container, object: object, query: ["multipart-manifest": "delete"]), expect: [200, 204])
+            } else {
+                try await send("DELETE", url(container: container, object: object), expect: [204])
+            }
         }
     }
 
@@ -240,7 +245,9 @@ public final class SwiftFileSystem: FileSystem {
         let pairs = children.isEmpty ? [(object, newObject)] : children.map { ($0, newObject + "/" + $0.dropFirst(object.count + 1)) }
         for (from, to) in pairs {
             let source = "/\(container)/\(from)".addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "/\(container)/\(from)"
-            try await send("PUT", url(container: newContainer, object: to), headers: ["X-Copy-From": source], body: Data(), expect: [201])
+            // multipart-manifest=get: num SLO copia o manifesto, não os gigabytes (objetos comuns ignoram).
+            try await send("PUT", url(container: newContainer, object: to, query: ["multipart-manifest": "get"]),
+                           headers: ["X-Copy-From": source], body: Data(), expect: [201])
             try await send("DELETE", url(container: container, object: from), expect: [204])
         }
     }
@@ -292,8 +299,14 @@ public final class SwiftFileSystem: FileSystem {
         progress(total + Int64(buffer.count))
     }
 
+    /// O Swift recusa objetos acima de 5 GB num PUT só: acima disso vai em segmentos com um manifesto (SLO).
+    nonisolated(unsafe) static var largeObjectThreshold: Int64 = 5 * 1024 * 1024 * 1024
+    nonisolated(unsafe) static var segmentSize: Int64 = 1024 * 1024 * 1024
+
     public func upload(_ local: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
         guard let (container, object) = split(path), !object.isEmpty else { throw WormlinkError.unsupportedOperation(String(localized: "Enviar para a raiz")) }
+        let size = (try? local.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+        if size > Self.largeObjectThreshold { return try await uploadLarge(local, size: size, container: container, object: object, progress: progress) }
         var request = URLRequest(url: url(container: container, object: object))
         request.httpMethod = "PUT"
         request.setValue(token, forHTTPHeaderField: "X-Auth-Token")
@@ -303,6 +316,47 @@ public final class SwiftFileSystem: FileSystem {
         let status = (response as! HTTPURLResponse).statusCode
         Transcript.log(title, "PUT /\(container)/\(object) → \(status)")
         guard status == 201 else { throw WormlinkError.server(status: status, message: String(decoding: data.prefix(200), as: UTF8.self)) }
+    }
+
+    /// Segmentos em ".file-segments/<objeto>/<data>/<tamanho>/<n>" (o mesmo esquema do Cyberduck) e o manifesto no lugar do objeto.
+    private func uploadLarge(_ local: URL, size: Int64, container: String, object: String,
+                             progress: @escaping @Sendable (Int64) -> Void) async throws {
+        let prefix = ".file-segments/\(object)/\(Int(Date().timeIntervalSince1970))/\(size)"
+        let input = try FileHandle(forReadingFrom: local)
+        defer { try? input.close() }
+        var manifest: [[String: Any]] = []
+        var sent: Int64 = 0, index = 0
+        while sent < size {
+            try Task.checkCancellation()
+            let name = prefix + String(format: "/%08d", index)
+            let length = min(Self.segmentSize, size - sent)
+            // Cada segmento sai de um arquivo temporário (o envio por arquivo não lê tudo na memória).
+            let part = FileManager.default.temporaryDirectory.appending(path: "Wormlink-segmento-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: part) }
+            FileManager.default.createFile(atPath: part.path, contents: nil)
+            let output = try FileHandle(forWritingTo: part)
+            var copied: Int64 = 0
+            while copied < length {
+                guard let block = try input.read(upToCount: Int(min(8 * 1024 * 1024, length - copied))), !block.isEmpty else { break }
+                try output.write(contentsOf: block)
+                copied += Int64(block.count)
+            }
+            try output.close()
+            var request = URLRequest(url: url(container: container, object: name))
+            request.httpMethod = "PUT"
+            request.setValue(token, forHTTPHeaderField: "X-Auth-Token")
+            let base = sent
+            let (data, response) = try await session.upload(for: request, fromFile: part, delegate: CloudUploadProgress { progress(base + $0) })
+            let http = response as! HTTPURLResponse
+            Transcript.log(title, "PUT /\(container)/\(name) → \(http.statusCode)")
+            guard http.statusCode == 201 else { throw WormlinkError.server(status: http.statusCode, message: String(decoding: data.prefix(200), as: UTF8.self)) }
+            manifest.append(["path": "/\(container)/\(name)", "etag": http.value(forHTTPHeaderField: "Etag") ?? "", "size_bytes": copied])
+            sent += copied
+            index += 1
+        }
+        try await send("PUT", url(container: container, object: object, query: ["multipart-manifest": "put"]),
+                       body: try JSONSerialization.data(withJSONObject: manifest), expect: [201])
+        progress(size)
     }
 
     /// HTTP não tem sessão aberta para fechar. Invalidar aqui derrubaria o app: editor, fila e miniaturas

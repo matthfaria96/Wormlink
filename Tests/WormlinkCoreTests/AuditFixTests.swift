@@ -78,3 +78,18 @@ import Testing
         if !passphrase.isEmpty { #expect(SSHUserAuth.loadKey(text, passphrase: "errada") == nil) }
     }
 }
+
+/// Agente que aceita a conexão e nunca responde: o pedido tem que desistir, não travar.
+@Test func silentSSHAgentTimesOut() throws {
+    let path = "/tmp/wl-agent-\(UUID().uuidString.prefix(8)).sock"
+    let server = socket(AF_UNIX, SOCK_STREAM, 0)
+    defer { close(server); unlink(path) }
+    var address = sockaddr_un()
+    address.sun_family = sa_family_t(AF_UNIX)
+    withUnsafeMutableBytes(of: &address.sun_path) { buffer in Array(path.utf8CString).withUnsafeBytes { buffer.copyMemory(from: $0) } }
+    _ = withUnsafePointer(to: &address) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(server, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) } }
+    listen(server, 1)
+    let start = Date()
+    #expect(throws: WormlinkError.timedOut) { try SSHAgent(socketPath: path).identities() }
+    #expect(Date().timeIntervalSince(start) < 15)
+}

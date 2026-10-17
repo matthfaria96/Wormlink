@@ -329,3 +329,36 @@ func sftpReadableErrors() async throws {
         #expect(error.localizedDescription.hasPrefix("Arquivo ou pasta não encontrado"), "\(error.localizedDescription)")
     }
 }
+
+/// Envio acima do limite do Swift: segmentos + manifesto (SLO), com limites pequenos para o teste.
+@Test(.enabled(if: ProcessInfo.processInfo.environment["WORMLINK_SWIFT"] != nil))
+func swiftLargeObjectUpload() async throws {
+    var bookmark = Bookmark(connectionProtocol: .swift, hostname: "127.0.0.1", port: 8090, username: "projeto:wl", path: "/")
+    bookmark.plainHTTP = true
+    bookmark.swiftAuthPath = "/auth/v1.0"
+    let fs = try await SwiftFileSystem.connect(bookmark, password: "senha")
+    try await fs.createDirectory("/grandes")
+    let (threshold, segment) = (SwiftFileSystem.largeObjectThreshold, SwiftFileSystem.segmentSize)
+    SwiftFileSystem.largeObjectThreshold = 1_000_000
+    SwiftFileSystem.segmentSize = 400_000
+    defer { SwiftFileSystem.largeObjectThreshold = threshold; SwiftFileSystem.segmentSize = segment }
+
+    let local = FileManager.default.temporaryDirectory.appending(path: "wl-slo-\(UUID().uuidString)")
+    let back = local.appendingPathExtension("volta")
+    defer { try? FileManager.default.removeItem(at: local); try? FileManager.default.removeItem(at: back) }
+    let data = Data((0..<1_300_000).map { UInt8(truncatingIfNeeded: $0 &* 31) })
+    try data.write(to: local)
+    try await fs.upload(local, to: "/grandes/video.bin") { _ in }
+
+    #expect(try await fs.list("/grandes").first { $0.name == "video.bin" }?.size == 1_300_000)
+    try await fs.download("/grandes/video.bin", to: back) { _ in }
+    #expect(try Data(contentsOf: back) == data)
+
+    try await fs.move("/grandes/video.bin", to: "/grandes/renomeado.bin")
+    try await fs.download("/grandes/renomeado.bin", to: back) { _ in }
+    #expect(try Data(contentsOf: back) == data)
+
+    try await fs.delete(FileItem(path: "/grandes/renomeado.bin", isDirectory: false))
+    // Os segmentos saem junto com o manifesto: não sobra nem a pasta .file-segments.
+    #expect(try await fs.list("/grandes").isEmpty)
+}

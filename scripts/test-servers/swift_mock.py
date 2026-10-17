@@ -8,7 +8,14 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8090
 TOKEN = "tok-123"
 STORAGE = "/v1/AUTH_test"
 containers = {}          # nome -> {objeto: (dados, content_type, modificado)}
+manifests = {}           # (contêiner, objeto) -> [(contêiner, segmento)]: Static Large Objects
 lock = threading.Lock()
+
+def content(container, obj, data):
+    """Um SLO devolve os segmentos concatenados."""
+    segments = manifests.get((container, obj))
+    if segments is None: return data
+    return b"".join(containers[sc][so][0] for sc, so in segments)
 
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -62,6 +69,7 @@ class H(BaseHTTPRequestHandler):
                         if sub not in seen: seen.add(sub); out.append({"subdir": sub})
                         continue
                     data, ctype, mtime = containers[container][name]
+                    data = content(container, name, data)
                     out.append({"name": name, "bytes": len(data), "content_type": ctype, "hash": hashlib.md5(data).hexdigest(),
                                 "last_modified": mtime})
                 return self.reply(200, json.dumps(out).encode(), {"Content-Type": "application/json"})
@@ -70,19 +78,43 @@ class H(BaseHTTPRequestHandler):
             if self.command == "PUT":
                 src = self.headers.get("X-Copy-From")
                 data = self.body()
+                copied = False
+                if q.get("multipart-manifest") == "put":
+                    segments = []
+                    for seg in json.loads(data):
+                        sc, _, so = seg["path"].lstrip("/").partition("/")
+                        stored = containers.get(sc, {}).get(so)
+                        if stored is None or hashlib.md5(stored[0]).hexdigest() != seg["etag"] or len(stored[0]) != seg["size_bytes"]:
+                            return self.reply(400, b"segmento invalido")
+                        segments.append((sc, so))
+                    manifests[(container, obj)] = segments
+                    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")
+                    store[obj] = (b"", "application/octet-stream", now)
+                    return self.reply(201)
                 if src:
                     sc, _, so = urllib.parse.unquote(src).lstrip("/").partition("/")
                     if so not in containers.get(sc, {}): return self.reply(404)
                     data, ctype, _ = containers[sc][so]
+                    if (sc, so) in manifests:
+                        if q.get("multipart-manifest") == "get": manifests[(container, obj)] = list(manifests[(sc, so)]); copied = True
+                        else: data = content(sc, so, data)
                 else:
                     ctype = self.headers.get("Content-Type", "application/octet-stream")
                 now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")
+                if not copied: manifests.pop((container, obj), None)   # objeto comum por cima de um SLO
                 store[obj] = (data, ctype, now)
                 return self.reply(201, headers={"Etag": hashlib.md5(data).hexdigest()})
             if obj not in store: return self.reply(404)
             data, ctype, _ = store[obj]
-            if self.command == "DELETE": del store[obj]; return self.reply(204)
+            if self.command == "DELETE":
+                segments = manifests.pop((container, obj), None)
+                if segments and q.get("multipart-manifest") == "delete":
+                    for sc, so in segments: containers.get(sc, {}).pop(so, None)
+                del store[obj]
+                return self.reply(200 if segments and q.get("multipart-manifest") == "delete" else 204)
+            data = content(container, obj, data)
             headers = {"Etag": hashlib.md5(data).hexdigest(), "Content-Type": ctype}
+            if (container, obj) in manifests: headers["X-Static-Large-Object"] = "True"
             rng = self.headers.get("Range")
             if rng and rng.startswith("bytes="):
                 start = int(rng[6:].split("-")[0])

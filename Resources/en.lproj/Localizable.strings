@@ -648,3 +648,10 @@
 "sftp://usuario@servidor/pasta" = "sftp://user@server/folder";
 "~/.ssh, ~/.ssh/config e agente (automático)" = "~/.ssh, ~/.ssh/config and agent (automatic)";
 "~/Sites/projeto" = "~/Sites/project";
+
+/* Barra personalizável */
+"Arquivos Ocultos" = "Hidden Files";
+"Desconectar o lado ativo" = "Disconnect the active side";
+"Terminal" = "Terminal";
+"Transferir" = "Transfer";
+"Voltar/Avançar" = "Back/Forward";

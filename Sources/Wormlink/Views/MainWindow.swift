@@ -22,7 +22,7 @@ struct MainWindow: View {
         .inspector(isPresented: $model.showInspector) {
             InspectorView(window: model).inspectorColumnWidth(min: 240, ideal: 270, max: 340)
         }
-        .toolbar { toolbar }
+        .toolbar(id: "browser") { toolbar }
         .sheet(isPresented: $model.showSync) { SyncSheet(window: model).environment(app) }
         .sheet(isPresented: Binding(get: { model.installKeyOn != nil }, set: { if !$0 { model.installKeyOn = nil } })) {
             if let fs = model.installKeyOn { InstallKeySheet(fs: fs) }
@@ -58,6 +58,9 @@ struct MainWindow: View {
                 if let folder = ProcessInfo.processInfo.environment["WORMLINK_PREVIEW_SSH"] { SSHKeyManager.folder = URL(filePath: folder) }
                 openSettings()
             case "bonjour": model.right.serversPage = .bonjour
+            case "toolbar":
+                try? await Task.sleep(for: .seconds(1))
+                NSApp.windows.first { $0.toolbar != nil }?.toolbar?.runCustomizationPalette(nil)
             case "history": model.right.serversPage = .history
             case "grid": model.right.serversAsGrid = true
             case "local", "sync", "inspectorLocal":
@@ -180,10 +183,12 @@ struct MainWindow: View {
         .simultaneousGesture(TapGesture().onEnded { model.active = model.side(of: slot) })
     }
 
+    /// Barra personalizável (Visualizar › Personalizar Barra de Ferramentas, ou clique direito nela).
+    /// Os itens com `.hidden` não aparecem de início, mas podem ser arrastados para a barra.
     @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
+    private var toolbar: some CustomizableToolbarContent {
         // Voltar/Avançar do lado ativo, como no Finder.
-        ToolbarItemGroup(placement: .navigation) {
+        ToolbarItem(id: "navigation", placement: .navigation) {
             ControlGroup {
                 Button {
                     Task { await model.activeFiles?.goBack() }
@@ -199,11 +204,14 @@ struct MainWindow: View {
                 }
                 .help("Avançar")
                 .disabled(!(model.activeFiles?.canGoForward ?? false))
+            } label: {
+                Label("Voltar/Avançar", systemImage: "chevron.left.chevron.right")
             }
             .controlGroupStyle(.navigation)
         }
+        .customizationBehavior(.reorderable)
 
-        ToolbarItemGroup {
+        ToolbarItem(id: "panes") {
             Button {
                 withAnimation(.snappy) { model.singlePane.toggle() }
             } label: {
@@ -211,25 +219,30 @@ struct MainWindow: View {
                       systemImage: model.singlePane ? "rectangle.split.2x1" : "rectangle")
             }
             .help(model.singlePane ? "Mostrar os dois lados" : "Mostrar só o lado ativo")
-            if model.singlePane {
-                Button {
-                    withAnimation(.snappy) { model.active = model.active == .left ? .right : .left }
-                } label: {
-                    Label("Trocar de Lado", systemImage: "arrow.left.arrow.right")
-                }
-                .help("Mostrar o outro lado")
-            }
         }
+
+        ToolbarItem(id: "swapSide") {
+            Button {
+                withAnimation(.snappy) { model.active = model.active == .left ? .right : .left }
+            } label: {
+                Label("Trocar de Lado", systemImage: "arrow.left.arrow.right")
+            }
+            .help("Mostrar o outro lado")
+            .disabled(!model.singlePane)
+        }
+        .defaultCustomization(.hidden)
 
         ToolbarSpacer(.fixed)
 
-        ToolbarItemGroup {
+        ToolbarItem(id: "linking") {
             Toggle(isOn: Binding(get: { model.linking }, set: { _ in model.toggleLinking() })) {
                 Label("Folder Linking", systemImage: "link")
             }
             .help("Ligar a navegação dos dois lados (Folder Linking)")
             .disabled(model.left.visibleFiles == nil || model.right.visibleFiles == nil)
+        }
 
+        ToolbarItem(id: "sync") {
             Button {
                 model.showSync = true
             } label: {
@@ -239,9 +252,11 @@ struct MainWindow: View {
             .disabled(model.left.visibleFiles == nil || model.right.visibleFiles == nil)
         }
 
+        optionalItems
+
         ToolbarSpacer(.fixed)
 
-        ToolbarItem {
+        ToolbarItem(id: "transfers") {
             Button {
                 showTransfers.toggle()
             } label: {
@@ -264,7 +279,7 @@ struct MainWindow: View {
             }
         }
 
-        ToolbarItem {
+        ToolbarItem(id: "inspector") {
             Button {
                 model.showInspector.toggle()
             } label: {
@@ -272,6 +287,90 @@ struct MainWindow: View {
             }
             .help("Mostrar ou ocultar o inspetor")
         }
+    }
+
+    /// Itens que só aparecem se o usuário arrastar para a barra.
+    @ToolbarContentBuilder
+    private var optionalItems: some CustomizableToolbarContent {
+        ToolbarItem(id: "transferSelection") {
+            Button {
+                model.transferSelection(using: app.transfers)
+            } label: {
+                Label("Transferir", systemImage: "arrow.right.arrow.left.square")
+            }
+            .help("Transferir Seleção para o Outro Lado")
+            .disabled(model.activeFiles?.selection.isEmpty ?? true)
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "quickConnect") {
+            Button {
+                let slot = model.right.showingServers || model.right.files == nil ? model.right : model.left
+                slot.showingServers = true
+                slot.editing = nil
+                slot.serversTab = .quickConnect
+            } label: {
+                Label("Quick Connect", systemImage: "bolt")
+            }
+            .help("Conexão rápida")
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "disconnect") {
+            Button {
+                Task { await model.disconnect(model.slot(model.active)) }
+            } label: {
+                Label("Desconectar", systemImage: "eject")
+            }
+            .help("Desconectar o lado ativo")
+            .disabled(model.activeFiles?.isLocalConnection ?? true)
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "newFolder") {
+            Button {
+                NotificationCenter.default.post(name: .wormlinkCreate, object: model.activeFiles?.id, userInfo: ["kind": "folder"])
+            } label: {
+                Label("Nova Pasta", systemImage: "folder.badge.plus")
+            }
+            .help("Nova Pasta")
+            .disabled(model.activeFiles == nil)
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "refresh") {
+            Button {
+                Task { await model.activeFiles?.reload() }
+            } label: {
+                Label("Atualizar", systemImage: "arrow.clockwise")
+            }
+            .help("Atualizar")
+            .disabled(model.activeFiles == nil)
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "hiddenFiles") {
+            Toggle(isOn: Binding(get: { model.activeFiles?.showHidden ?? false },
+                                 set: { model.activeFiles?.showHidden = $0 })) {
+                Label("Arquivos Ocultos", systemImage: "eye")
+            }
+            .help("Mostrar/Ocultar Arquivos Ocultos")
+            .disabled(model.activeFiles == nil)
+        }
+        .defaultCustomization(.hidden)
+
+        ToolbarItem(id: "terminal") {
+            Button {
+                guard let files = model.activeFiles else { return }
+                Terminal.open(files.path, bookmark: files.isLocalConnection ? nil : files.bookmark)
+            } label: {
+                Label("Terminal", systemImage: "apple.terminal")
+            }
+            .help("Abrir no Terminal")
+            .disabled(!(model.activeFiles.map { $0.isLocal || ($0.vault(at: $0.path) == nil && $0.bookmark?.connectionProtocol == .sftp) } ?? false))
+        }
+        .defaultCustomization(.hidden)
+
     }
 }
 

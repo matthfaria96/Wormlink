@@ -17,7 +17,8 @@ cd "$W"
 [ -f ssh/client_ed25519 ] || ssh-keygen -q -t ed25519 -N "" -f ssh/client_ed25519
 [ -f ssh/client_rsa ] || ssh-keygen -q -t rsa -b 3072 -N "" -f ssh/client_rsa
 [ -f ssh/client_enc ] || ssh-keygen -q -t ed25519 -N segredo -f ssh/client_enc   # chave com frase secreta
-cat ssh/client_ed25519.pub ssh/client_rsa.pub ssh/client_enc.pub > ssh/authorized_keys
+[ -f ssh/client_ecdsa ] || ssh-keygen -q -t ecdsa -b 256 -N "" -f ssh/client_ecdsa
+cat ssh/client_ed25519.pub ssh/client_rsa.pub ssh/client_enc.pub ssh/client_ecdsa.pub > ssh/authorized_keys
 cat > ssh/sshd_config <<CFG
 Port 2222
 ListenAddress 127.0.0.1

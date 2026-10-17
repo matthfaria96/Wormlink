@@ -40,6 +40,8 @@ private func bookmarks() -> [(String, Bookmark, String?)] {
     sftpEd.path = dir + "/root"
     var sftpRSA = sftpEd
     sftpRSA.keyFile = dir + "/ssh/client_rsa"
+    var sftpECDSA = sftpEd
+    sftpECDSA.keyFile = dir + "/ssh/client_ecdsa"
     var sftpEncrypted = sftpEd
     sftpEncrypted.keyFile = dir + "/ssh/client_enc"
     var s3 = Bookmark(connectionProtocol: .s3, hostname: "127.0.0.1", port: 9000, username: "WLACCESS", path: "/bucket-um")
@@ -47,6 +49,7 @@ private func bookmarks() -> [(String, Bookmark, String?)] {
     return [
         ("SFTP ed25519", sftpEd, nil),
         ("SFTP RSA", sftpRSA, nil),
+        ("SFTP ECDSA", sftpECDSA, nil),
         ("SFTP chave cifrada", sftpEncrypted, nil),
         ("FTP", Bookmark(connectionProtocol: .ftp, hostname: "127.0.0.1", port: 2121, username: "wl"), "senha"),
         ("FTP-TLS", Bookmark(connectionProtocol: .ftps, hostname: "127.0.0.1", port: 2122, username: "wl"), "senha"),

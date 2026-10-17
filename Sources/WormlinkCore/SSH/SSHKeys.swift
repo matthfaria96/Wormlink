@@ -96,13 +96,16 @@ final class SSHUserAuth: NIOSSHClientUserAuthenticationDelegate, @unchecked Send
         return keyFiles(preferred: [bookmark.keyFile].compactMap { $0 } + config.identityFiles, includeDefaults: !config.identitiesOnly)
     }
 
-    /// Chaves OpenSSH Ed25519 e RSA, com ou sem frase secreta (bcrypt + aes256-ctr, padrão do ssh-keygen).
+    /// Chaves OpenSSH Ed25519, RSA e ECDSA, com ou sem frase secreta (bcrypt + aes256-ctr, padrão do ssh-keygen).
     static func loadKey(_ text: String, passphrase: String?) -> NIOSSHPrivateKey? {
         let secret = passphrase.map { Data($0.utf8) }
         if let key = try? Curve25519.Signing.PrivateKey(sshEd25519: text, decryptionKey: secret) { return NIOSSHPrivateKey(ed25519Key: key) }
         if let key = try? Insecure.RSA.PrivateKey(sshRsa: text, decryptionKey: secret) {
             return NIOSSHPrivateKey(custom: Insecure.RSA.SHA512PrivateKey(key))
         }
+        if let key = try? P256.Signing.PrivateKey(sshECDSA: text, decryptionKey: secret) { return NIOSSHPrivateKey(p256Key: key) }
+        if let key = try? P384.Signing.PrivateKey(sshECDSA: text, decryptionKey: secret) { return NIOSSHPrivateKey(p384Key: key) }
+        if let key = try? P521.Signing.PrivateKey(sshECDSA: text, decryptionKey: secret) { return NIOSSHPrivateKey(p521Key: key) }
         return nil
     }
 

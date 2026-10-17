@@ -1,4 +1,5 @@
 import Foundation
+import NIOSSH
 import Testing
 @testable import WormlinkCore
 
@@ -56,4 +57,24 @@ import Testing
         Fotos                                           Disk
         """
     #expect(SMBFileSystem.parseShares(output) == ["Meus Arquivos", "Fotos"])
+}
+
+@Test(arguments: [256, 384, 521]) func ecdsaKeysLoad(bits: Int) throws {
+    let folder = FileManager.default.temporaryDirectory.appending(path: "wl-ecdsa-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    for passphrase in ["", "segredo"] {
+        let file = folder.appending(path: "id_ecdsa_\(bits)_\(passphrase.isEmpty ? "plain" : "enc")")
+        let keygen = Process()
+        keygen.executableURL = URL(filePath: "/usr/bin/ssh-keygen")
+        keygen.arguments = ["-q", "-t", "ecdsa", "-b", "\(bits)", "-N", passphrase, "-C", "", "-f", file.path]
+        try keygen.run()
+        keygen.waitUntilExit()
+        let text = try String(contentsOf: file, encoding: .utf8)
+        let key = try #require(SSHUserAuth.loadKey(text, passphrase: passphrase.isEmpty ? nil : passphrase))
+        let expected = try String(contentsOf: file.appendingPathExtension("pub"), encoding: .utf8)
+            .split(separator: " ").prefix(2).joined(separator: " ")
+        #expect(String(openSSHPublicKey: key.publicKey) == expected)
+        if !passphrase.isEmpty { #expect(SSHUserAuth.loadKey(text, passphrase: "errada") == nil) }
+    }
 }

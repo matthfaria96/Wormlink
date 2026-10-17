@@ -25,15 +25,20 @@ private struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Toggle("Mostrar arquivos ocultos em painéis novos", isOn: $showHidden)
-            Picker("Duplo clique num arquivo remoto", selection: $doubleClick) {
-                Text("Baixar para o outro lado").tag("transfer")
-                Text("Editar no app padrão").tag("edit")
-                Text("Editar no Wormlink").tag("editInternal")
+            Section {
+                Toggle("Mostrar arquivos ocultos em painéis novos", isOn: $showHidden)
+                Picker("Duplo clique num arquivo remoto", selection: $doubleClick) {
+                    Text("Baixar para o outro lado").tag("transfer")
+                    Text("Editar no app padrão").tag("edit")
+                    Text("Editar no Wormlink").tag("editInternal")
+                }
             }
-            Toggle("Avisar quando uma transferência terminar em segundo plano", isOn: $notify)
+            Section {
+                Toggle("Avisar quando uma transferência terminar em segundo plano", isOn: $notify)
+            }
         }
         .formStyle(.grouped)
+        .scrollDisabled(true)
         .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -51,7 +56,20 @@ private struct TransferSettingsView: View {
 
     var body: some View {
         Form {
-            Stepper("Transferências simultâneas: \(maxConcurrent)", value: $maxConcurrent, in: 1...8)
+            Section {
+                Picker("Transferências simultâneas", selection: $maxConcurrent) {
+                    ForEach(1...8, id: \.self) { Text($0, format: .number).tag($0) }
+                }
+                Picker("Quando o arquivo já existe", selection: $conflict) {
+                    Text("Perguntar").tag("ask")
+                    ForEach(ConflictAction.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
+                }
+                Toggle("Copiar as URLs depois do envio", isOn: $copyURLs)
+                Toggle(isOn: $preserveDates) {
+                    Text("Preservar a data de modificação (quando o servidor permite)")
+                    Text("Com datas preservadas, a sincronização reconhece arquivos iguais mesmo depois de transferidos.")
+                }
+            }
             Section("Velocidade") {
                 Picker("Limite de envio", selection: $limitUpload) { speedOptions }
                 Picker("Limite de download", selection: $limitDownload) { speedOptions }
@@ -59,31 +77,30 @@ private struct TransferSettingsView: View {
             .onChange(of: limitUpload) { TransferSettings.applyBandwidthLimits() }
             .onChange(of: limitDownload) { TransferSettings.applyBandwidthLimits() }
             Section("Segurança") {
-                Toggle("Enviar com nome temporário e renomear no fim", isOn: $atomicUploads)
-                Text("Assim o arquivo no servidor nunca fica pela metade se a conexão cair.").font(.caption).foregroundStyle(.secondary)
-                Toggle("Verificar cada arquivo depois de transferido", isOn: $verifyChecksums)
-                Text("Usa o checksum do servidor (SHA-256 via SSH, HASH no FTP, MD5 no S3 e Google Drive, hash do Dropbox) ou, sem ele, o tamanho.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Toggle(isOn: $atomicUploads) {
+                    Text("Enviar com nome temporário e renomear no fim")
+                    Text("Assim o arquivo no servidor nunca fica pela metade se a conexão cair.")
+                }
+                Toggle(isOn: $verifyChecksums) {
+                    Text("Verificar cada arquivo depois de transferido")
+                    Text("Usa o checksum do servidor (SHA-256 via SSH, HASH no FTP, MD5 no S3 e Google Drive, hash do Dropbox) ou, sem ele, o tamanho.")
+                }
             }
-            Toggle("Copiar as URLs depois do envio", isOn: $copyURLs)
-            Picker("Quando o arquivo já existe", selection: $conflict) {
-                Text("Perguntar").tag("ask")
-                ForEach(ConflictAction.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
-            }
-            Toggle("Preservar a data de modificação (quando o servidor permite)", isOn: $preserveDates)
-            Text("Com datas preservadas, a sincronização reconhece arquivos iguais mesmo depois de transferidos.")
-                .font(.caption).foregroundStyle(.secondary)
-            Section("FTP em modo ASCII") {
+            Section {
                 TextField("Extensões", text: $asciiList, axis: .vertical)
                     .lineLimit(2...3)
                     .onChange(of: asciiList) {
                         let list = asciiList.split(whereSeparator: { $0 == " " || $0 == "," }).map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".")) }
                         UserDefaults.standard.set(list.filter { !$0.isEmpty }, forKey: "asciiExtensions")
                     }
-                Text("Usadas pelos servidores FTP com “Modo ASCII” ligado no editor.").font(.caption).foregroundStyle(.secondary)
+            } header: {
+                Text("FTP em modo ASCII")
+            } footer: {
+                Text("Usadas pelos servidores FTP com “Modo ASCII” ligado no editor.")
             }
         }
         .formStyle(.grouped)
+        .scrollDisabled(true)
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -96,36 +113,44 @@ private struct TransferSettingsView: View {
     }
 }
 
+/// Padrões ignorados: uma linha editável por padrão, com remover em cada linha (como as listas dos Ajustes do Sistema).
 private struct SkipRulesSettings: View {
     @AppStorage("skipPatterns") private var stored = SkipRules.default.patterns.joined(separator: "\n")
     @State private var patterns: [String] = []
-    @State private var selection: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Itens com estes nomes são ignorados em transferências e sincronizações. Use * e ? como curingas.")
-                .font(.callout).foregroundStyle(.secondary)
-            List(selection: $selection) {
+        Form {
+            Section {
                 ForEach(patterns.indices, id: \.self) { index in
-                    TextField("padrão", text: Binding(get: { patterns[index] }, set: { patterns[index] = $0; save() }))
-                        .textFieldStyle(.plain)
-                        .tag(index)
+                    HStack {
+                        TextField("Padrão", text: Binding(get: { patterns.indices.contains(index) ? patterns[index] : "" },
+                                                          set: { if patterns.indices.contains(index) { patterns[index] = $0; save() } }), prompt: Text("padrão"))
+                            .labelsHidden()
+                        Button {
+                            patterns.remove(at: index)
+                            save()
+                        } label: {
+                            Label("Remover", systemImage: "minus.circle.fill")
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                        .help("Remover")
+                    }
+                }
+            } header: {
+                Text("Itens com estes nomes são ignorados em transferências e sincronizações. Use * e ? como curingas.")
+                    .font(.callout).fontWeight(.regular).foregroundStyle(.secondary)
+            } footer: {
+                HStack {
+                    Button("Adicionar Padrão") { patterns.append("*.log"); save() }
+                    Spacer()
+                    Button("Restaurar Padrões") { patterns = SkipRules.default.patterns; save() }
                 }
             }
-            .listStyle(.bordered)
-            .frame(height: 200)
-            HStack {
-                Button("Adicionar", systemImage: "plus") { patterns.append("*.log"); save() }
-                Button("Remover", systemImage: "minus") {
-                    if let selection, patterns.indices.contains(selection) { patterns.remove(at: selection); save() }
-                }
-                .disabled(selection == nil)
-                Spacer()
-                Button("Restaurar Padrões") { patterns = SkipRules.default.patterns; save() }
-            }
-            .labelStyle(.iconOnly)
         }
-        .padding(20)
+        .formStyle(.grouped)
+        .frame(height: 440)
         .onAppear { patterns = UserDefaults.standard.stringArray(forKey: "skipPatterns") ?? SkipRules.default.patterns }
     }
 
@@ -139,40 +164,55 @@ private struct ServersSettings: View {
 
     var body: some View {
         Form {
-            Section("Perfis de conexão") {
-                if imported.isEmpty {
-                    Text("Os serviços prontos (Wasabi, R2, Backblaze, Nextcloud…) aparecem no menu Protocolo do editor.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+            Section {
                 ForEach(imported) { preset in
                     LabeledContent(preset.name, value: preset.connectionProtocol.displayName)
                 }
-                Button("Importar Perfil do Cyberduck…") { importProfile() }
-                if let importError { Text(importError).font(.caption).foregroundStyle(.red) }
+                LabeledContent("Perfis do Cyberduck") {
+                    Button("Importar Perfil…") { importProfile() }
+                }
+                if let importError { Text(importError).foregroundStyle(.red) }
+            } header: {
+                Text("Perfis de conexão")
+            } footer: {
+                if imported.isEmpty {
+                    Text("Os serviços prontos (Wasabi, R2, Backblaze, Nextcloud…) aparecem no menu Protocolo do editor.")
+                }
             }
-            Section("Importar e exportar") {
-                HStack {
-                    Menu("Importar de…") {
+            Section {
+                LabeledContent("Importar de outro app") {
+                    Menu("Escolher") {
                         ForEach(ServerImporter.allCases) { source in
                             Button(source.title) { app.importServers(from: source) }
                         }
                     }
                     .fixedSize()
-                    Button("Exportar…") { app.exportServers() }
-                    Button("Restaurar…") { app.restoreServers() }
                 }
+                LabeledContent("Backup") {
+                    HStack {
+                        Button("Exportar…") { app.exportServers() }
+                        Button("Restaurar…") { app.restoreServers() }
+                    }
+                }
+            } header: {
+                Text("Importar e exportar")
+            } footer: {
                 Text("Cyberduck, Transmit, FileZilla e WinSCP. O backup (.wormlinkservers) pode incluir as senhas.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
-            Toggle("Mostrar servidores da rede local (Bonjour)", isOn: Binding(get: { app.showBonjour }, set: { app.showBonjour = $0 }))
-            Toggle("Sincronizar servidores pelo iCloud Drive", isOn: Binding(get: { app.iCloudSync }, set: { app.iCloudSync = $0 }))
-            Text("Os favoritos ficam em iCloud Drive › Wormlink e aparecem nos seus outros Macs. As senhas continuam só no Chaves deste Mac.")
-                .font(.caption).foregroundStyle(.secondary)
-            if app.iCloudSync && !app.iCloudAvailable {
-                Label("O iCloud Drive não está ativo neste Mac.", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+            Section {
+                Toggle("Mostrar servidores da rede local (Bonjour)", isOn: Binding(get: { app.showBonjour }, set: { app.showBonjour = $0 }))
+                Toggle(isOn: Binding(get: { app.iCloudSync }, set: { app.iCloudSync = $0 })) {
+                    Text("Sincronizar servidores pelo iCloud Drive")
+                    Text("Os favoritos ficam em iCloud Drive › Wormlink e aparecem nos seus outros Macs. As senhas continuam só no Chaves deste Mac.")
+                }
+                if app.iCloudSync && !app.iCloudAvailable {
+                    Label("O iCloud Drive não está ativo neste Mac.", systemImage: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                }
             }
         }
         .formStyle(.grouped)
+        .scrollDisabled(true)
         .fixedSize(horizontal: false, vertical: true)
     }
 

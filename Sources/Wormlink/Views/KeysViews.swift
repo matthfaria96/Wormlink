@@ -31,6 +31,7 @@ struct KeysSettings: View {
                     Text(key.fingerprint).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 }
             }
+            .tableStyle(.bordered(alternatesRowBackgrounds: true))
             .frame(height: 200)
             .contextMenu(forSelectionType: SSHKeyManager.Key.ID.self) { ids in
                 if let key = keys.first(where: { ids.contains($0.id) }) {
@@ -150,7 +151,7 @@ struct InstallKeySheet: View {
                 if state != .done {
                     Button("Instalar", action: install)
                         .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.glassProminent).tint(.wormlink)
+                        .buttonStyle(.borderedProminent)
                         .disabled(selection == nil || state == .working)
                 }
             }

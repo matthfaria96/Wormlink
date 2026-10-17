@@ -52,6 +52,10 @@ final class AppModel {
     }
 
     init() {
+        #if DEBUG
+        // Só em depuração: WORMLINK_DATA_DIR troca a pasta de dados (capturas sem tocar nos dados reais).
+        if let dir = ProcessInfo.processInfo.environment["WORMLINK_DATA_DIR"] { WormlinkPaths.dataDirectory = URL(filePath: dir) }
+        #endif
         let iCloud = UserDefaults.standard.bool(forKey: "iCloudSync") && Self.iCloudFolder != nil
         let store = BookmarkStore(fileURL: iCloud ? Self.iCloudFolder!.appending(path: "Bookmarks.json") : BookmarkStore.defaultURL)
         self.store = store

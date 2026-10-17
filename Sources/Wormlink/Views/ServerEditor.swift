@@ -2,8 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WormlinkCore
 
-/// Editor de servidor dentro do painel, no layout do Transmit: ícone e nome no topo,
-/// depois Protocolo, Endereço/Porta, Usuário, Senha, URL raiz, caminhos.
+/// Editor de servidor dentro do painel: ícone no topo e os campos num Form agrupado, como os Ajustes do Sistema.
 struct ServerEditor: View {
     @Environment(AppModel.self) private var app
     @Bindable var slot: PaneSlot
@@ -18,56 +17,54 @@ struct ServerEditor: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                Button {
-                    showIcons = true
-                } label: {
-                    HStack(spacing: 4) {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("Nome", text: $draft.bookmark.nickname,
+                              prompt: Text(draft.bookmark.hostname.isEmpty ? "Nome" : draft.bookmark.hostname))
+                } header: {
+                    Button {
+                        showIcons = true
+                    } label: {
                         ServerIconView(draft.bookmark, size: 64)
-                        Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "chevron.down.circle.fill")
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.secondary, .background)
+                                    .font(.title3)
+                                    .offset(x: 6, y: 6)
+                            }
                     }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showIcons, arrowEdge: .bottom) { IconPicker(bookmark: $draft.bookmark) }
+                    .help("Escolher ícone e cor")
+                    .accessibilityLabel("Escolher ícone e cor")
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 6)
                 }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showIcons, arrowEdge: .bottom) { IconPicker(bookmark: $draft.bookmark) }
-                .help("Escolher ícone e cor")
-
-                TextField("Nome", text: $draft.bookmark.nickname, prompt: Text(draft.bookmark.hostname.isEmpty ? "Nome" : draft.bookmark.hostname))
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 17, weight: .semibold))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 220)
-                    .padding(.bottom, 3)
-                    .overlay(alignment: .bottom) { Rectangle().fill(.separator).frame(height: 1) }
-
                 ConnectionFields(bookmark: $draft.bookmark, password: $draft.password, showPaths: true)
-
-                HStack {
-                    Button("Salvar como Droplet") {
-                        save(connect: false)
-                        Droplets.save(draft.bookmark)
-                    }
-                    .disabled(!isValid)
-                    Button("Conectar") { save(connect: true) }
-                        .disabled(!isValid)
-                    Spacer()
-                    Button("Cancelar") { slot.editing = nil }
-                        .keyboardShortcut(.cancelAction)
-                    Button("Salvar") { save(connect: false) }
-                        .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.glassProminent)
-                        .tint(.wormlink)
-                        .disabled(!isValid)
-                }
-                .controlSize(.large)
-                .padding(.top, 6)
             }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 26)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
+            .formStyle(.grouped)
+
+            Divider()
+            HStack {
+                Button("Salvar como Droplet") {
+                    save(connect: false)
+                    Droplets.save(draft.bookmark)
+                }
+                .disabled(!isValid)
+                Button("Conectar") { save(connect: true) }
+                    .disabled(!isValid)
+                Spacer()
+                Button("Cancelar") { slot.editing = nil }
+                    .keyboardShortcut(.cancelAction)
+                Button("Salvar") { save(connect: false) }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!isValid)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
         }
-        .scrollContentBackground(.hidden)
     }
 
     private var isValid: Bool {
@@ -95,34 +92,42 @@ struct QuickConnectView: View {
     @State private var addToServers = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                Image(systemName: "bolt.horizontal.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Color.wormlink.gradient)
-                Text("Conexão rápida").font(.title3.weight(.semibold))
-                TextField("", text: $address, prompt: Text("Cole um endereço: sftp://usuario@servidor/pasta"))
-                    .textFieldStyle(.roundedBorder)
-                    .onChange(of: address) { applyAddress() }
-                ConnectionFields(bookmark: $slot.quickConnect.bookmark, password: $slot.quickConnect.password, showPaths: false)
-                HStack {
-                    Toggle("Adicionar aos Servidores", isOn: $addToServers)
-                    Spacer()
-                    Button("Conectar", action: connect)
-                        .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.glassProminent)
-                        .tint(.wormlink)
-                        .disabled(slot.quickConnect.bookmark.hostname.isEmpty && FieldSpec(slot.quickConnect.bookmark).showHost
-                                  && ![.s3, .azure].contains(slot.quickConnect.bookmark.connectionProtocol))
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("URL", text: $address, prompt: Text("sftp://usuario@servidor/pasta"))
+                        .onChange(of: address) { applyAddress() }
+                } header: {
+                    VStack(spacing: 8) {
+                        Image(systemName: "bolt.horizontal.circle.fill")
+                            .font(.system(size: 48))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.tint)
+                        Text("Conexão rápida").font(.title3.weight(.semibold)).foregroundStyle(.primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 6)
+                } footer: {
+                    Text("Cole um endereço completo ou preencha os campos abaixo.")
                 }
-                .controlSize(.large)
+                ConnectionFields(bookmark: $slot.quickConnect.bookmark, password: $slot.quickConnect.password, showPaths: false)
+                Section {
+                    Toggle("Adicionar aos Servidores", isOn: $addToServers)
+                }
             }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 26)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
+            .formStyle(.grouped)
+
+            Divider()
+            HStack {
+                Spacer()
+                Button("Conectar", action: connect)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(slot.quickConnect.bookmark.hostname.isEmpty && FieldSpec(slot.quickConnect.bookmark).showHost
+                              && ![.s3, .azure].contains(slot.quickConnect.bookmark.connectionProtocol))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
         }
-        .scrollContentBackground(.hidden)
     }
 
     private func applyAddress() {
@@ -200,7 +205,7 @@ struct FieldSpec {
     }
 }
 
-/// Campos de conexão alinhados à direita do rótulo, separados por linhas finas.
+/// Campos de conexão em seções de Form agrupado (rótulo à esquerda, valor à direita).
 struct ConnectionFields: View {
     @Binding var bookmark: Bookmark
     @Binding var password: String
@@ -212,238 +217,158 @@ struct ConnectionFields: View {
     private var proto: ConnectionProtocol { bookmark.connectionProtocol }
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 9) {
-            GridRow {
-                label(String(localized: "Protocolo"))
-                HStack {
-                    Picker("", selection: kindBinding) {
-                        Section("Protocolos") {
-                            ForEach(ConnectionProtocol.allCases) { proto in
-                                Label(proto.displayName, systemImage: proto.symbolName).tag("proto:" + proto.rawValue)
-                            }
-                        }
-                        Section("Serviços") {
-                            ForEach(PresetStore.all) { preset in
-                                Label(preset.name, systemImage: preset.connectionProtocol.symbolName).tag("preset:" + preset.id)
-                            }
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                    if proto == .ftp || proto == .ftps {
-                        Toggle("Modo passivo", isOn: .constant(true))
-                            .disabled(true)
-                            .help("O Wormlink sempre usa o modo passivo (EPSV/PASV).")
+        Section {
+            Picker("Protocolo", selection: kindBinding) {
+                Section("Protocolos") {
+                    ForEach(ConnectionProtocol.allCases) { proto in
+                        Label(proto.displayName, systemImage: proto.symbolName).tag("proto:" + proto.rawValue)
                     }
                 }
+                Section("Serviços") {
+                    ForEach(PresetStore.all) { preset in
+                        Label(preset.name, systemImage: preset.connectionProtocol.symbolName).tag("preset:" + preset.id)
+                    }
+                }
+            }
+            if proto == .ftp || proto == .ftps {
+                Toggle("Modo passivo", isOn: .constant(true))
+                    .disabled(true)
+                    .help("O Wormlink sempre usa o modo passivo (EPSV/PASV).")
             }
             if proto == .s3 || proto == .azure || proto == .swift {
-                GridRow {
-                    Text("")
-                    Toggle("Sem TLS (HTTP), para servidores locais ou emuladores", isOn: $bookmark.plainHTTP)
-                        .font(.system(size: 12))
+                Toggle("Sem TLS (HTTP), para servidores locais ou emuladores", isOn: $bookmark.plainHTTP)
+            }
+            if spec.showHost {
+                field(spec.hostLabel, prompt: spec.hostPrompt, text: $bookmark.hostname)
+                if spec.showPort {
+                    TextField("Porta", value: $bookmark.port, format: .number.grouping(.never))
                 }
             }
-            if let note = spec.note {
-                GridRow {
-                    Text("")
-                    Text(note).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if proto == .swift {
+                Picker("Versão", selection: Binding(get: { bookmark.swiftAuthPath ?? "/v3" }, set: { bookmark.swiftAuthPath = $0 })) {
+                    Text("Keystone 3").tag("/v3")
+                    Text("Keystone 2").tag("/v2.0")
+                    Text("TempAuth / v1").tag("/auth/v1.0")
                 }
+                field(String(localized: "Região"), prompt: String(localized: "opcional"), text: optionalBinding(\.swiftRegion))
             }
-            if proto.isOAuth {
-                line
-                GridRow {
-                    label(String(localized: "Conta"))
+        } footer: {
+            if let note = spec.note { Text(note) }
+        }
+
+        if proto.isOAuth {
+            Section {
+                LabeledContent("Conta") {
                     Text(bookmark.username.isEmpty ? String(localized: "Ao conectar, o navegador abre para você entrar.") : bookmark.username)
                         .foregroundStyle(bookmark.username.isEmpty ? .secondary : .primary)
                 }
                 if proto.oauthProvider?.clientID.isEmpty == true {
-                    GridRow {
-                        Text("")
-                        SettingsLink {
-                            Label("Configure o Client ID em Ajustes › Nuvens", systemImage: "exclamationmark.triangle")
-                        }
-                        .buttonStyle(.link)
+                    SettingsLink {
+                        Label("Configure o Client ID em Ajustes › Nuvens", systemImage: "exclamationmark.triangle")
                     }
+                    .buttonStyle(.link)
                 }
-            }
-            if spec.showHost {
-                line
-                GridRow {
-                    label(spec.hostLabel)
-                    HStack {
-                        field(spec.hostPrompt, text: $bookmark.hostname)
-                        if spec.showPort {
-                            Text("Porta").foregroundStyle(.secondary)
-                            TextField("", value: $bookmark.port, format: .number.grouping(.never))
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 13, weight: .semibold))
-                                .frame(width: 52)
-                        }
-                    }
-                }
-            }
-            if proto == .swift {
-                line
-                GridRow {
-                    label(String(localized: "Versão"))
-                    HStack {
-                        Picker("", selection: Binding(get: { bookmark.swiftAuthPath ?? "/v3" }, set: { bookmark.swiftAuthPath = $0 })) {
-                            Text("Keystone 3").tag("/v3")
-                            Text("Keystone 2").tag("/v2.0")
-                            Text("TempAuth / v1").tag("/auth/v1.0")
-                        }
-                        .labelsHidden().fixedSize()
-                        Text("Região").foregroundStyle(.secondary)
-                        field("opcional", text: optionalBinding(\.swiftRegion))
-                    }
-                }
-            }
-            if spec.showCredentials {
-                line
-                GridRow {
-                    label(spec.userLabel)
-                    field(spec.userPrompt, text: $bookmark.username)
-                }
-                line
-                GridRow {
-                    label(spec.passwordLabel)
-                    SecureField("", text: $password, prompt: Text(proto == .sftp ? "senha (ou use uma chave)" : spec.passwordPrompt))
-                        .textFieldStyle(.plain)
-                }
-            }
-            if proto == .sftp {
-                line
-                GridRow {
-                    label(String(localized: "Chave SSH"))
-                    HStack {
-                        Text(bookmark.keyFile.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "~/.ssh, ~/.ssh/config e agente (automático)")
-                            .foregroundStyle(bookmark.keyFile == nil ? .tertiary : .primary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        if bookmark.keyFile != nil {
-                            BarButton(title: String(localized: "Limpar chave"), symbol: "xmark.circle.fill") { bookmark.keyFile = nil }
-                        }
-                        BarButton(title: String(localized: "Escolher chave"), symbol: "key") { chooseKey() }
-                    }
-                }
-            }
-            if proto == .s3 { s3Advanced }
-            if showPaths && proto != .sharePoint {
-                Divider().gridCellUnsizedAxes(.horizontal).padding(.vertical, 6)
-                GridRow {
-                    label("URL raiz")
-                    field("http://www.servidor.com/projeto", text: optionalBinding(\.webURL))
-                }
-            }
-            line
-            GridRow {
-                label(spec.pathLabel)
-                field(spec.pathPrompt, text: $bookmark.path)
-            }
-            if showPaths {
-                line
-                GridRow {
-                    label(String(localized: "Caminho local"))
-                    HStack {
-                        field("~/Sites/projeto", text: Binding(
-                            get: { bookmark.localPath.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "" },
-                            set: { bookmark.localPath = $0.isEmpty ? nil : ($0 as NSString).expandingTildeInPath }))
-                        BarButton(title: String(localized: "Escolher pasta"), symbol: "folder.badge.gearshape") { chooseLocalFolder() }
-                    }
-                }
-                line
-                serverOptions
             }
         }
-        .font(.system(size: 13))
+
+        if spec.showCredentials || proto == .sftp || proto == .s3 {
+            Section {
+                if spec.showCredentials {
+                    field(spec.userLabel, prompt: spec.userPrompt, text: $bookmark.username)
+                    SecureField(spec.passwordLabel, text: $password,
+                                prompt: Text(proto == .sftp ? String(localized: "senha (ou use uma chave)") : spec.passwordPrompt))
+                }
+                if proto == .sftp {
+                    LabeledContent("Chave SSH") {
+                        HStack(spacing: 6) {
+                            Text(bookmark.keyFile.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? String(localized: "Automática"))
+                                .foregroundStyle(bookmark.keyFile == nil ? .secondary : .primary)
+                                .lineLimit(1).truncationMode(.middle)
+                                .help(bookmark.keyFile == nil ? String(localized: "~/.ssh, ~/.ssh/config e agente (automático)") : "")
+                            if bookmark.keyFile != nil {
+                                BarButton(title: String(localized: "Limpar chave"), symbol: "xmark.circle.fill") { bookmark.keyFile = nil }
+                            }
+                            Button("Escolher…", action: chooseKey)
+                        }
+                    }
+                }
+                if proto == .s3 { s3Advanced }
+            }
+        }
+
+        Section {
+            if showPaths && proto != .sharePoint {
+                field(String(localized: "URL raiz"), prompt: "http://www.servidor.com/projeto", text: optionalBinding(\.webURL))
+            }
+            field(spec.pathLabel, prompt: spec.pathPrompt, text: $bookmark.path)
+            if showPaths {
+                LabeledContent("Caminho local") {
+                    HStack(spacing: 6) {
+                        TextField("Caminho local", text: Binding(
+                            get: { bookmark.localPath.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "" },
+                            set: { bookmark.localPath = $0.isEmpty ? nil : ($0 as NSString).expandingTildeInPath }),
+                                  prompt: Text("~/Sites/projeto"))
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
+                        Button("Escolher…", action: chooseLocalFolder)
+                    }
+                }
+            }
+        }
+
+        if showPaths { serverOptions }
     }
 
     /// Ajustes deste servidor (Transmit: "Server-specific preferences"; Cyberduck: aba Avançado do favorito).
     @ViewBuilder
     private var serverOptions: some View {
         let isFTP = proto == .ftp || proto == .ftps
-        GridRow {
-            Text("")
+        Section {
             DisclosureGroup("Avançado", isExpanded: $showServerOptions) {
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 7) {
-                    if !proto.isOAuth {
-                        GridRow {
-                            label(String(localized: "Tempo limite"))
-                            HStack(spacing: 6) {
-                                TextField("", value: Binding(get: { bookmark.timeout ?? 20 },
-                                                             set: { bookmark.timeout = $0 == 20 ? nil : max(5, min($0, 600)) }),
-                                          format: .number)
-                                    .textFieldStyle(.roundedBorder).frame(width: 56)
-                                Text("segundos").foregroundStyle(.secondary)
-                            }
+                if !proto.isOAuth {
+                    LabeledContent("Tempo limite") {
+                        HStack(spacing: 6) {
+                            TextField("Tempo limite", value: Binding(get: { bookmark.timeout ?? 20 },
+                                                                     set: { bookmark.timeout = $0 == 20 ? nil : max(5, min($0, 600)) }),
+                                      format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 56)
+                            Text("segundos").foregroundStyle(.secondary)
                         }
-                    }
-                    if isFTP {
-                        GridRow {
-                            label(String(localized: "Codificação"))
-                            Picker("", selection: Binding(get: { bookmark.encoding ?? "" },
-                                                          set: { bookmark.encoding = $0.isEmpty ? nil : $0 })) {
-                                ForEach(Self.encodings, id: \.id) { Text($0.title).tag($0.id) }
-                            }
-                            .labelsHidden().fixedSize()
-                        }
-                        GridRow {
-                            Text("")
-                            Toggle("Listar com MLSD quando o servidor oferece", isOn: Binding(
-                                get: { bookmark.ftpUseMLSD ?? true }, set: { bookmark.ftpUseMLSD = $0 ? nil : false }))
-                        }
-                        GridRow {
-                            Text("")
-                            Toggle("Modo ASCII para arquivos de texto", isOn: Binding(
-                                get: { bookmark.ftpASCIIMode ?? false }, set: { bookmark.ftpASCIIMode = $0 ? true : nil }))
-                                .help("Converte fins de linha (CRLF ↔ LF) em .txt, .html, .php… — ajuste a lista em Ajustes › Transferências.")
-                        }
-                    }
-                    if proto == .s3 {
-                        GridRow {
-                            label(String(localized: "Classe padrão"))
-                            Picker("", selection: optionalBinding(\.s3StorageClass)) {
-                                Text("Do bucket").tag("")
-                                ForEach(S3StorageClass.all, id: \.id) { Text($0.title).tag($0.id) }
-                            }
-                            .labelsHidden().fixedSize()
-                        }
-                        GridRow {
-                            label(String(localized: "Criptografia"))
-                            Picker("", selection: optionalBinding(\.s3Encryption)) {
-                                ForEach(S3Encryption.all, id: \.id) { Text($0.title).tag($0.id) }
-                            }
-                            .labelsHidden().fixedSize()
-                        }
-                        GridRow {
-                            label(String(localized: "Acesso"))
-                            Picker("", selection: optionalBinding(\.s3ACL)) {
-                                Text("Do bucket").tag("")
-                                ForEach(S3CannedACL.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
-                            }
-                            .labelsHidden().fixedSize()
-                        }
-                        GridRow {
-                            Text("")
-                            Toggle("Quem baixa paga (Requester Pays)", isOn: Binding(
-                                get: { bookmark.s3RequesterPays ?? false }, set: { bookmark.s3RequesterPays = $0 ? true : nil }))
-                        }
-                        GridRow {
-                            Text("")
-                            Toggle("Usar Transfer Acceleration", isOn: Binding(
-                                get: { bookmark.s3Accelerate ?? false }, set: { bookmark.s3Accelerate = $0 ? true : nil }))
-                        }
-                    }
-                    GridRow {
-                        label(String(localized: "Notas"))
-                        TextField("", text: optionalBinding(\.comment), prompt: Text("opcional"), axis: .vertical)
-                            .textFieldStyle(.plain).lineLimit(1...4)
                     }
                 }
-                .padding(.top, 4)
+                if isFTP {
+                    Picker("Codificação", selection: Binding(get: { bookmark.encoding ?? "" },
+                                                             set: { bookmark.encoding = $0.isEmpty ? nil : $0 })) {
+                        ForEach(Self.encodings, id: \.id) { Text($0.title).tag($0.id) }
+                    }
+                    Toggle("Listar com MLSD quando o servidor oferece", isOn: Binding(
+                        get: { bookmark.ftpUseMLSD ?? true }, set: { bookmark.ftpUseMLSD = $0 ? nil : false }))
+                    Toggle("Modo ASCII para arquivos de texto", isOn: Binding(
+                        get: { bookmark.ftpASCIIMode ?? false }, set: { bookmark.ftpASCIIMode = $0 ? true : nil }))
+                        .help("Converte fins de linha (CRLF ↔ LF) em .txt, .html, .php… — ajuste a lista em Ajustes › Transferências.")
+                }
+                if proto == .s3 {
+                    Picker("Classe padrão", selection: optionalBinding(\.s3StorageClass)) {
+                        Text("Do bucket").tag("")
+                        ForEach(S3StorageClass.all, id: \.id) { Text($0.title).tag($0.id) }
+                    }
+                    Picker("Criptografia", selection: optionalBinding(\.s3Encryption)) {
+                        ForEach(S3Encryption.all, id: \.id) { Text($0.title).tag($0.id) }
+                    }
+                    Picker("Acesso", selection: optionalBinding(\.s3ACL)) {
+                        Text("Do bucket").tag("")
+                        ForEach(S3CannedACL.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
+                    }
+                    Toggle("Quem baixa paga (Requester Pays)", isOn: Binding(
+                        get: { bookmark.s3RequesterPays ?? false }, set: { bookmark.s3RequesterPays = $0 ? true : nil }))
+                    Toggle("Usar Transfer Acceleration", isOn: Binding(
+                        get: { bookmark.s3Accelerate ?? false }, set: { bookmark.s3Accelerate = $0 ? true : nil }))
+                }
+                TextField("Notas", text: optionalBinding(\.comment), prompt: Text("opcional"), axis: .vertical)
+                    .lineLimit(1...4)
             }
-            .font(.system(size: 12))
         }
     }
 
@@ -458,38 +383,20 @@ struct ConnectionFields: View {
     /// "Amazon S3 with IAM Role" do Transmit + perfis da AWS CLI.
     @ViewBuilder
     private var s3Advanced: some View {
-        line
-        GridRow {
-            label(String(localized: "Perfil AWS"))
-            Picker("", selection: Binding(get: { bookmark.awsProfile ?? "" }, set: { bookmark.awsProfile = $0.isEmpty ? nil : $0 })) {
-                Text("Nenhum (usar as chaves acima)").tag("")
-                ForEach(AWSProfiles.load().names, id: \.self) { Text($0).tag($0) }
-            }
-            .labelsHidden().fixedSize()
+        Picker("Perfil AWS", selection: Binding(get: { bookmark.awsProfile ?? "" }, set: { bookmark.awsProfile = $0.isEmpty ? nil : $0 })) {
+            Text("Nenhum (usar as chaves acima)").tag("")
+            ForEach(AWSProfiles.load().names, id: \.self) { Text($0).tag($0) }
         }
-        GridRow {
-            Text("")
-            DisclosureGroup("IAM Role, MFA e STS", isExpanded: $showAdvanced) {
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 7) {
-                    GridRow { label("Papel (ARN)"); field("arn:aws:iam::123456789012:role/Nome", text: optionalBinding(\.roleARN)) }
-                    GridRow { label("External ID"); field("opcional", text: optionalBinding(\.externalID)) }
-                    GridRow { label("MFA (ARN)"); field("arn:aws:iam::123456789012:mfa/usuário", text: optionalBinding(\.mfaSerial)) }
-                    GridRow { label("Endpoint STS"); field("https://sts.amazonaws.com", text: optionalBinding(\.stsEndpoint)) }
-                }
-                .padding(.top, 4)
-            }
-            .font(.system(size: 12))
+        DisclosureGroup("IAM Role, MFA e STS", isExpanded: $showAdvanced) {
+            field("Papel (ARN)", prompt: "arn:aws:iam::123456789012:role/Nome", text: optionalBinding(\.roleARN))
+            field("External ID", prompt: String(localized: "opcional"), text: optionalBinding(\.externalID))
+            field("MFA (ARN)", prompt: "arn:aws:iam::123456789012:mfa/usuário", text: optionalBinding(\.mfaSerial))
+            field("Endpoint STS", prompt: "https://sts.amazonaws.com", text: optionalBinding(\.stsEndpoint))
         }
     }
 
-    private var line: some View { Divider().gridCellUnsizedAxes(.horizontal) }
-
-    private func label(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary).gridColumnAlignment(.trailing).frame(minWidth: 100, alignment: .trailing)
-    }
-
-    private func field(_ prompt: String, text: Binding<String>) -> some View {
-        TextField("", text: text, prompt: Text(prompt)).textFieldStyle(.plain)
+    private func field(_ label: String, prompt: String, text: Binding<String>) -> some View {
+        TextField(label, text: text, prompt: Text(prompt))
     }
 
     private func optionalBinding(_ key: WritableKeyPath<Bookmark, String?>) -> Binding<String> {

@@ -24,8 +24,12 @@ struct WormlinkApp: App {
                 }
         }
         .defaultSize(width: 1100, height: 680)
-        .windowToolbarStyle(.unified(showsTitle: false))
-        .commands { WormlinkCommands(app: app) }
+        .windowToolbarStyle(.unified)
+        .commands {
+            ToolbarCommands()
+            InspectorCommands()
+            WormlinkCommands(app: app)
+        }
 
         Window("Transferências", id: "transfers") {
             TransfersView()

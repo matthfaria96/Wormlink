@@ -88,7 +88,7 @@ struct FilesPane: View {
     // MARK: Cabeçalho: local | caminho ⌄ ……… modo de exibição
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             LocationMenu(window: window, slot: slot)
             Divider().frame(height: 14)
             Menu {
@@ -100,60 +100,63 @@ struct FilesPane: View {
                     }
                 }
             } label: {
-                HStack(spacing: 3) {
-                    Text(pane.path == "/" ? pane.title : RemotePath.name(pane.path)).font(.system(size: 13, weight: .semibold))
-                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
-                }
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .fixedSize()
-            if pane.isLoading { ProgressView().controlSize(.mini) }
-            Spacer()
-            Menu {
-                Picker("Exibição", selection: $pane.layout) {
-                    ForEach(PaneModel.Layout.allCases, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
-                }
-                .pickerStyle(.inline)
-            } label: {
-                Image(systemName: pane.layout.symbol).font(.system(size: 13))
+                Text(pane.path == "/" ? pane.title : RemotePath.name(pane.path)).font(.headline)
             }
             .menuStyle(.button)
             .buttonStyle(.borderless)
+            .tint(.primary)
+            .fixedSize()
+            .help("Pastas acima desta")
+            if pane.isLoading { ProgressView().controlSize(.mini) }
+            Spacer()
+            Picker("Exibição", selection: $pane.layout) {
+                ForEach(PaneModel.Layout.allCases, id: \.self) { Label($0.title, systemImage: $0.symbol).tag($0) }
+            }
+            .pickerStyle(.menu)
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
             .menuIndicator(.hidden)
+            .labelsHidden()
             .tint(.secondary)
             .fixedSize()
             .help("Ver como lista, ícones, colunas ou galeria")
         }
         .padding(.horizontal, 10)
         .frame(height: 30)
-        .background(isActive ? Color.wormlink.opacity(0.06) : .clear)
+        .background(isActive ? Color.accentColor.opacity(0.07) : .clear)
     }
 
-    // MARK: Busca
+    // MARK: Busca (barra de escopo, como a do Finder)
+
+    private var searchScope: Binding<Bool> {
+        Binding(get: { pane.searchResults != nil }, set: { subfolders in
+            if subfolders { pane.startSearch(pane.filter) } else { pane.clearSearch() }
+        })
+    }
 
     private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            if pane.searchResults == nil {
-                Text("Filtrando esta pasta").foregroundStyle(.secondary)
-                Spacer()
-                Button("Buscar em Subpastas") { pane.startSearch(pane.filter) }.buttonStyle(.link)
-            } else {
-                if pane.isSearching {
-                    ProgressView().controlSize(.mini)
-                    Text("Buscando em \(RemotePath.name(pane.searchFolder ?? pane.path))…").foregroundStyle(.secondary).lineLimit(1)
-                } else {
-                    Text("\(pane.searchResults?.count ?? 0) resultado(s) em subpastas").foregroundStyle(.secondary)
-                }
-                Spacer()
-                if pane.isSearching { Button("Parar") { pane.stopSearch() }.buttonStyle(.link) }
-                Button("Voltar à Pasta") { pane.clearSearch() }.buttonStyle(.link)
+        HStack(spacing: 6) {
+            Text("Buscar:").foregroundStyle(.secondary)
+            Toggle("Esta Pasta", isOn: Binding(get: { !searchScope.wrappedValue }, set: { if $0 { searchScope.wrappedValue = false } }))
+            Toggle("Subpastas", isOn: Binding(get: { searchScope.wrappedValue }, set: { if $0 { searchScope.wrappedValue = true } }))
+                .disabled(pane.filter.isEmpty && pane.searchResults == nil)
+            Spacer()
+            if pane.isSearching {
+                ProgressView().controlSize(.mini)
+                Text("Buscando em \(RemotePath.name(pane.searchFolder ?? pane.path))…").foregroundStyle(.secondary).lineLimit(1)
+                Button("Parar") { pane.stopSearch() }
+            } else if let results = pane.searchResults {
+                Text(results.count == 1 ? String(localized: "1 resultado") : String(localized: "\(results.count) resultados"))
+                    .foregroundStyle(.secondary)
             }
         }
-        .font(.system(size: 12))
+        .toggleStyle(.button)
+        .buttonStyle(.accessoryBar)
+        .font(.callout)
+        .controlSize(.small)
         .padding(.horizontal, 10)
-        .frame(height: 26)
+        .frame(height: 28)
+        .background(.bar)
     }
 
     // MARK: Lista com subpastas expansíveis
@@ -168,13 +171,14 @@ struct FilesPane: View {
                             Task { await pane.toggle(row.item) }
                         } label: {
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.caption2.weight(.bold))
                                 .foregroundStyle(.secondary)
                                 .rotationEffect(.degrees(pane.expanded.contains(row.item.path) ? 90 : 0))
                                 .frame(width: 14, height: 14)
                                 .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(pane.expanded.contains(row.item.path) ? "Recolher" : "Expandir")
                     } else {
                         Color.clear.frame(width: 14, height: 14)
                     }
@@ -192,9 +196,9 @@ struct FilesPane: View {
             }
             .width(min: 120, ideal: 240)
             TableColumn("Tamanho", value: \.item.sortSize) { row in
-                Text(row.item.size.map { $0.formatted(.byteCount(style: .file)) } ?? "•")
+                Text(row.item.size.map { $0.formatted(.byteCount(style: .file)) } ?? "--")
                     .foregroundStyle(.secondary).monospacedDigit()
-                    .frame(maxWidth: .infinity, alignment: row.item.size == nil ? .center : .trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .width(min: 50, ideal: 64, max: 96)
             TableColumn("Data", value: \.item.sortDate) { row in
@@ -204,8 +208,7 @@ struct FilesPane: View {
         } rows: {
             ForEach(pane.rows) { TableRow($0) }
         }
-        .tableStyle(.inset(alternatesRowBackgrounds: false))
-        .scrollContentBackground(.hidden)
+        .tableStyle(.inset(alternatesRowBackgrounds: true))
         .contextMenu(forSelectionType: String.self) { ids in
             FileMenu(window: window, pane: pane, items: pane.rows.map(\.item).filter { ids.contains($0.id) },
                      rename: startRename, create: { newName = $0 == .folder ? String(localized: "sem título") : String(localized: "sem título.txt"); creating = $0 },
@@ -234,15 +237,20 @@ struct FilesPane: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 12) {
                 ForEach(pane.rows.filter { $0.depth == 0 }) { row in
                     let selected = pane.selection.contains(row.id)
-                    VStack(spacing: 4) {
+                    // Seleção do Finder no modo ícones: fundo cinza no ícone, nome na cor de destaque.
+                    VStack(spacing: 3) {
                         Image(nsImage: FileIcons.icon(for: row.item, size: 56))
-                        Text(row.item.name).font(.system(size: 11)).lineLimit(2).multilineTextAlignment(.center)
+                            .padding(4)
+                            .background(selected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 6, style: .continuous))
+                        Text(row.item.name).font(.callout).lineLimit(2).multilineTextAlignment(.center)
                             .padding(.horizontal, 4)
-                            .background(selected ? Color.wormlink.opacity(0.8) : .clear, in: .rect(cornerRadius: 4))
-                            .foregroundStyle(selected ? .white : .primary)
+                            .foregroundStyle(selected ? Color.white : row.item.isHidden ? Color.secondary : Color.primary)
+                            .background(selected ? Color.accentColor : .clear, in: .rect(cornerRadius: 4))
                     }
-                    .frame(width: 96, height: 96)
+                    .frame(width: 96, height: 100, alignment: .top)
                     .contentShape(.rect)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                     .onTapGesture(count: 2) { Task { await primaryAction(row.item) } }
                     .onTapGesture {
                         pane.selection = [row.id]
@@ -270,8 +278,12 @@ struct FilesPane: View {
             }
         } else if pane.isLoading && pane.items.isEmpty {
             ProgressView()
-        } else if pane.rows.isEmpty && !pane.isLoading {
-            Text(pane.filter.isEmpty ? "Pasta vazia" : "Nada encontrado").foregroundStyle(.tertiary)
+        } else if pane.rows.isEmpty && !pane.isLoading && !pane.isSearching {
+            if pane.filter.isEmpty {
+                ContentUnavailableView("Pasta Vazia", systemImage: "folder")
+            } else {
+                ContentUnavailableView.search(text: pane.filter)
+            }
         }
     }
 
@@ -355,34 +367,28 @@ struct PlacesBar: View {
     }
 
     var body: some View {
+        // Barra de atalhos no estilo das barras de acessório do sistema (escopo do Finder, Favoritos do Safari).
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 4) {
-                HStack(spacing: 2) {
-                    ForEach(places, id: \.self) { place in
-                        let selected = RemotePath.normalize(place) == pane.path
-                        Button {
-                            Task { await pane.go(to: place) }
-                        } label: {
-                            Label(placeName(place), systemImage: placeSymbol(place))
-                                .font(.system(size: 12))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .contentShape(.capsule)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(selected ? .primary : .secondary)
-                        .glassEffect(selected ? .regular.interactive() : .identity, in: .capsule)
-                        .contextMenu {
-                            Button("Remover dos Places") { remove(place) }
-                        }
+            HStack(spacing: 2) {
+                ForEach(places, id: \.self) { place in
+                    Toggle(isOn: Binding(get: { RemotePath.normalize(place) == pane.path },
+                                         set: { _ in Task { await pane.go(to: place) } })) {
+                        Label(placeName(place), systemImage: placeSymbol(place))
                     }
-                    if places.count <= 1 {
-                        Text("Arraste pastas aqui para acesso rápido").font(.system(size: 11)).foregroundStyle(.tertiary)
-                            .padding(.leading, 6)
+                    .help(place)
+                    .contextMenu {
+                        Button("Remover dos Places") { remove(place) }
                     }
                 }
-                .padding(.horizontal, 8)
+                if places.count <= 1 {
+                    Text("Arraste pastas aqui para acesso rápido").font(.caption).foregroundStyle(.tertiary)
+                        .padding(.leading, 6)
+                }
             }
+            .toggleStyle(.button)
+            .buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .padding(.horizontal, 8)
         }
         .frame(height: 28)
         .background(isTargeted ? Color.wormlink.opacity(0.15) : .clear)
@@ -458,12 +464,13 @@ struct LocationMenu: View {
                 Button("Desconectar de “\(files.title)”") { Task { await window.disconnect(slot) } }
             }
         } label: {
-            Image(systemName: symbol).font(.system(size: 13))
+            Label("Trocar o local deste lado", systemImage: symbol)
         }
+        .labelStyle(.iconOnly)
         .menuStyle(.button)
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .menuIndicator(.hidden)
-        .foregroundStyle(slot.showingServers ? Color.wormlink : .secondary)
+        .tint(.secondary)
         .fixedSize()
         .help("Trocar o local deste lado")
     }
@@ -671,11 +678,11 @@ struct CommandSheet: View {
                     .textFieldStyle(.roundedBorder)
                     .font(.body.monospaced())
                     .onSubmit(run)
-                Button("Enviar", action: run).buttonStyle(.glassProminent).tint(.wormlink).disabled(command.isEmpty || running)
+                Button("Enviar", action: run).buttonStyle(.borderedProminent).disabled(command.isEmpty || running)
             }
             ScrollView {
                 Text(output.isEmpty ? " " : output)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.callout.monospaced())
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(8)

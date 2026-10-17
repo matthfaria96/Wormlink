@@ -44,7 +44,7 @@ struct TranscriptView: View {
                             .foregroundStyle(line.isReply ? .secondary : .primary)
                             .textSelection(.enabled)
                     }
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.callout.monospaced())
                     .id(line.id)
                 }
                 .listStyle(.plain)

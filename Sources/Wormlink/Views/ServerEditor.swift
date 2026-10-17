@@ -218,7 +218,7 @@ struct ConnectionFields: View {
 
     var body: some View {
         Section {
-            Picker("Protocolo", selection: kindBinding) {
+            Picker(selection: kindBinding) {
                 Section("Protocolos") {
                     ForEach(ConnectionProtocol.allCases) { proto in
                         Label { Text(proto.displayName) } icon: { Image(nsImage: ProtocolBadge.image(ProtocolBadge.style(for: proto))) }
@@ -231,6 +231,9 @@ struct ConnectionFields: View {
                             .tag("preset:" + preset.id)
                     }
                 }
+            } label: {
+                // O selo do protocolo escolhido, ao lado do rótulo (o menu fechado só mostra o nome).
+                Label { Text("Protocolo") } icon: { ProtocolBadge(style: currentBadge, size: 18) }
             }
             if proto == .ftp || proto == .ftps {
                 Toggle("Modo passivo", isOn: .constant(true))
@@ -403,6 +406,14 @@ struct ConnectionFields: View {
 
     private func optionalBinding(_ key: WritableKeyPath<Bookmark, String?>) -> Binding<String> {
         Binding(get: { bookmark[keyPath: key] ?? "" }, set: { bookmark[keyPath: key] = $0.isEmpty ? nil : $0 })
+    }
+
+    private var currentBadge: ProtocolBadge.Style {
+        let kind = kindBinding.wrappedValue
+        if kind.hasPrefix("preset:"), let preset = PresetStore.all.first(where: { "preset:" + $0.id == kind }) {
+            return ProtocolBadge.style(for: preset)
+        }
+        return ProtocolBadge.style(for: proto)
     }
 
     /// Protocolo puro ("proto:sftp") ou perfil de serviço ("preset:wasabi").

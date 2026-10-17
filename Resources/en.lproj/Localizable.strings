@@ -663,3 +663,6 @@
 "Origem: %@, %@\nDestino: %@, %@" = "Source: %@, %@\nDestination: %@, %@";
 "apagar" = "delete";
 "Para outras regiões: s3.<região>.wasabisys.com" = "For other regions: s3.<region>.wasabisys.com";
+
+"Nenhum servidor salvo" = "No Saved Servers";
+"Salve um servidor para acessá-lo com um clique, ou use o Quick Connect para conectar sem salvar." = "Save a server to open it with one click, or use Quick Connect to connect without saving.";

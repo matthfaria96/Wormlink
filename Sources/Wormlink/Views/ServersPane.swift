@@ -285,6 +285,10 @@ struct ServersPane: View {
                 Button("Adicionar Servidor", action: newServer)
             }
         }
+        // Na lista, a linha tem recuo à esquerda: sem isso o aviso fica fora do centro.
+        .frame(maxWidth: .infinity)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
 
@@ -300,7 +304,7 @@ struct ServersPane: View {
 
     private var emptyTitle: String {
         switch slot.serversPage {
-        case .all: String(localized: "Nenhum Servidor")
+        case .all: String(localized: "Nenhum servidor salvo")
         case .history: String(localized: "Nenhuma Conexão Recente")
         case .cyberduck: String(localized: "Nada para Importar")
         case .bonjour: String(localized: "Procurando Servidores")
@@ -310,7 +314,7 @@ struct ServersPane: View {
 
     private var emptyText: String? {
         switch slot.serversPage {
-        case .all: String(localized: "Adicione um ou use o Quick Connect.")
+        case .all: String(localized: "Salve um servidor para acessá-lo com um clique, ou use o Quick Connect para conectar sem salvar.")
         case .history: nil
         case .cyberduck: String(localized: "Nenhum favorito novo do Cyberduck neste Mac.")
         case .bonjour: String(localized: "SFTP, FTP, WebDAV e SMB anunciados na rede local aparecem aqui sozinhos.")

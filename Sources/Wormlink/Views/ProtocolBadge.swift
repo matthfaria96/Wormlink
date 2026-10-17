@@ -40,7 +40,7 @@ struct ProtocolBadge: View {
 
     static func style(for proto: ConnectionProtocol) -> Style {
         switch proto {
-        case .sftp: style("terminal.fill", 0x2BB39A, 0x137A6A)
+        case .sftp: style("terminal.fill", 0x4CC22A, 0x28851B)   // verde do app: é o primeiro e o padrão
         case .ftp: style("arrow.up.arrow.down", 0x4A9DF5, 0x1F64C7)
         case .ftps: style("lock.fill", 0x3B7BE8, 0x1A47A8)
         case .webdav: style("globe", 0xF5A33B, 0xD6721A)

@@ -11,13 +11,10 @@ struct MainWindow: View {
     @State private var showTransfers = false
 
     var body: some View {
-        HSplitView {
-            if !model.singlePane || model.active == .left {
-                side(model.left).frame(minWidth: 260, maxWidth: .infinity)
-            }
-            if !model.singlePane || model.active == .right {
-                side(model.right).frame(minWidth: 260, maxWidth: .infinity)
-            }
+        PaneSplitView(hidden: !model.singlePane ? .none : (model.active == .left ? .right : .left)) {
+            side(model.left)
+        } right: {
+            side(model.right)
         }
         .inspector(isPresented: $model.showInspector) {
             InspectorView(window: model).inspectorColumnWidth(min: 240, ideal: 270, max: 340)
@@ -232,7 +229,7 @@ struct MainWindow: View {
 
         ToolbarItem(id: "panes") {
             Button {
-                withAnimation(.snappy) { model.singlePane.toggle() }
+                model.singlePane.toggle()
             } label: {
                 Label(model.singlePane ? "Dois Painéis" : "Um Painel",
                       systemImage: model.singlePane ? "rectangle.split.2x1" : "rectangle")
@@ -242,7 +239,7 @@ struct MainWindow: View {
 
         ToolbarItem(id: "swapSide") {
             Button {
-                withAnimation(.snappy) { model.active = model.active == .left ? .right : .left }
+                model.active = model.active == .left ? .right : .left
             } label: {
                 Label("Trocar de Lado", systemImage: "arrow.left.arrow.right")
             }

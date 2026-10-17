@@ -104,7 +104,7 @@ final class TransferQueue {
                  into directory: String, bookmark: Bookmark? = nil, completion: @escaping () -> Void) {
         guard !items.isEmpty else { return }
         let kind: Transfer.Kind = source is LocalFileSystem ? .upload : (destination is LocalFileSystem ? .download : .copy)
-        let title = items.count == 1 ? items[0].name : "\(items.count) itens"
+        let title = items.count == 1 ? items[0].name : String(localized: "\(items.count) itens")
         add(Transfer(kind: kind, title: title, destination: "\(destination.title): \(directory)") { transfer in
             let ask = ConflictPrompter.resolver(for: transfer.title)
             let resuming = transfer.resuming
@@ -274,7 +274,8 @@ enum ConflictPrompter {
         alert.messageText = String(localized: "“\(source.name)” já existe no destino")
         let mine = source.size.map { $0.formatted(.byteCount(style: .file)) } ?? "—"
         let theirs = existing.size.map { $0.formatted(.byteCount(style: .file)) } ?? "—"
-        alert.informativeText = "Origem: \(mine), \(source.modified?.shortStamp ?? "—")\nDestino: \(theirs), \(existing.modified?.shortStamp ?? "—")"
+        let (mineDate, theirDate) = (source.modified?.shortStamp ?? "—", existing.modified?.shortStamp ?? "—")
+        alert.informativeText = String(localized: "Origem: \(mine), \(mineDate)\nDestino: \(theirs), \(theirDate)")
         let canResume = !source.isDirectory && (existing.size ?? 0) < (source.size ?? 0)
         var actions: [ConflictAction] = [.overwrite]
         if canResume { actions.append(.resume) }

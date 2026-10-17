@@ -655,3 +655,11 @@
 "Terminal" = "Terminal";
 "Transferir" = "Transfer";
 "Voltar/Avançar" = "Back/Forward";
+
+/* Textos que estavam fixos em português */
+"%lld itens" = "%lld items";
+"Ele aparece na barra lateral do Finder, em Locais. Se for a primeira vez, ative o Wormlink Disk em Ajustes do Sistema › Geral › Itens de Início e Extensões › Provedores de Arquivos." = "It appears in the Finder sidebar under Locations. If this is the first time, turn on Wormlink Disk in System Settings › General › Login Items & Extensions › File Providers.";
+"Falhou: %@" = "Failed: %@";
+"Origem: %@, %@\nDestino: %@, %@" = "Source: %@, %@\nDestination: %@, %@";
+"apagar" = "delete";
+"Para outras regiões: s3.<região>.wasabisys.com" = "For other regions: s3.<region>.wasabisys.com";

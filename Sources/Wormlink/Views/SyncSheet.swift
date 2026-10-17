@@ -84,7 +84,7 @@ struct SyncSheet: View {
             TextField("Ignorar", text: $skipText, prompt: Text(".DS_Store, *.tmp, node_modules"))
             LabeledContent("Diferença de fuso") {
                 HStack(spacing: 6) {
-                    Text(options.timeOffset == 0 ? "Nenhuma" : "\(Int(options.timeOffset / 3_600)) h").monospacedDigit()
+                    Text(options.timeOffset == 0 ? String(localized: "Nenhuma") : String(localized: "\(Int(options.timeOffset / 3_600)) h")).monospacedDigit()
                     Stepper("Diferença de fuso", value: $options.timeOffset, in: -86_400...86_400, step: 3_600).labelsHidden()
                 }
             }
@@ -127,7 +127,7 @@ struct SyncSheet: View {
                         Image(systemName: change.isDirectory ? "folder.fill" : "doc").foregroundStyle(.secondary)
                         Text(change.relativePath).lineLimit(1).truncationMode(.middle)
                         Spacer()
-                        Text(change.kind == .delete ? "apagar" : change.size.formatted(.byteCount(style: .file)))
+                        Text(change.kind == .delete ? String(localized: "apagar") : change.size.formatted(.byteCount(style: .file)))
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                 }

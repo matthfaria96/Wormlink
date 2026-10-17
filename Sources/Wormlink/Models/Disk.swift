@@ -46,13 +46,10 @@ enum Disk {
     static func explainActivation(_ bookmark: Bookmark) {
         let alert = NSAlert()
         alert.messageText = String(localized: "“\(bookmark.displayName)” foi montado no Finder")
-        alert.informativeText = """
-        Ele aparece na barra lateral do Finder, em Locais. Se for a primeira vez, ative o Wormlink Disk em \
-        Ajustes do Sistema › Geral › Itens de Início e Extensões › Provedores de Arquivos.
-        """
+        alert.informativeText = String(localized: "Ele aparece na barra lateral do Finder, em Locais. Se for a primeira vez, ative o Wormlink Disk em Ajustes do Sistema › Geral › Itens de Início e Extensões › Provedores de Arquivos.")
         alert.addButton(withTitle: String(localized: "Mostrar no Finder"))
         alert.addButton(withTitle: String(localized: "Abrir Ajustes do Sistema"))
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         switch alert.runModal() {
         case .alertFirstButtonReturn: Task { await reveal(bookmark) }
         case .alertSecondButtonReturn:

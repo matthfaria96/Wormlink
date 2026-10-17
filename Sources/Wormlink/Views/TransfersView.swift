@@ -105,7 +105,7 @@ private struct TransferRow: View {
             if let detail = transfer.detail { text += "\n\(detail)" }
             return text
         case .finished: return String(localized: "Concluída — \(total) em \(transfer.destination)")
-        case .failed(let message): return "Falhou: \(message)"
+        case .failed(let message): return String(localized: "Falhou: \(message)")
         case .cancelled: return String(localized: "Cancelada")
         case .paused: return String(localized: "Pausada — \(done) de \(total)")
         }

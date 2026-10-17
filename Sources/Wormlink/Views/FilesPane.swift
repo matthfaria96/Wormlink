@@ -334,8 +334,18 @@ struct FilesPane: View {
 
     private func dropFromPane(_ drags: [PaneDrag]) -> Bool {
         guard let drag = drags.first, drag.pane != pane.id, let source = window.pane(with: drag.pane) else { return false }
-        let items = source.rows.map(\.item).filter { drag.paths.contains($0.path) }
-        window.transfer(items, from: source, to: pane, into: pane.path, using: app.transfers)
+        let known = source.rows.map(\.item).filter { drag.paths.contains($0.path) }
+        // Itens de subcolunas (visualização em colunas) não estão nas linhas do painel: lista a pasta deles.
+        let missing = drag.paths.filter { path in !known.contains { $0.path == path } }
+        let (window, app, pane) = (window, app, pane)
+        Task {
+            var items = known
+            for parent in Set(missing.map(RemotePath.parent)) {
+                if let listed = try? await source.fs(for: parent).list(parent) { items += listed.filter { missing.contains($0.path) } }
+            }
+            guard !items.isEmpty else { return }
+            window.transfer(items, from: source, to: pane, into: pane.path, using: app.transfers)
+        }
         return true
     }
 

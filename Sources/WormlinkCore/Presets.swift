@@ -50,7 +50,7 @@ public struct ConnectionPreset: Identifiable, Hashable, Codable, Sendable {
               userLabel: "Key ID", passwordLabel: "Application Key", icon: .archive,
               note: String(localized: "Use uma Application Key do painel da Backblaze; o endpoint da região é descoberto sozinho.")),
         .init(id: "wasabi", name: "Wasabi", protocol: .s3, hostname: "s3.wasabisys.com", userLabel: "Access Key", passwordLabel: "Secret Key",
-              icon: .cloud, note: "Para outras regiões: s3.<região>.wasabisys.com"),
+              icon: .cloud, note: String(localized: "Para outras regiões: s3.<região>.wasabisys.com")),
         .init(id: "r2", name: "Cloudflare R2", protocol: .s3, hostname: "<conta>.r2.cloudflarestorage.com", userLabel: "Access Key ID",
               passwordLabel: "Secret Access Key", icon: .cloud, note: String(localized: "Troque <conta> pelo Account ID da Cloudflare.")),
         .init(id: "spaces", name: "DigitalOcean Spaces", protocol: .s3, hostname: "nyc3.digitaloceanspaces.com", userLabel: "Access Key",

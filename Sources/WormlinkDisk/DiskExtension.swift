@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 import WormlinkCore
 
 /// "Wormlink Disk": monta um servidor no Finder (como o Transmit Disk e o Mountain Duck).
-/// Cada domínio é um favorito; o identificador de cada item é o caminho remoto.
+/// Cada domínio é um favorito; os identificadores são opacos e sobrevivem a renomear/mover (ItemIdentifiers).
 @objc(WormlinkDiskExtension)
 final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, @unchecked Sendable {
     let domain: NSFileProviderDomain
@@ -25,9 +25,9 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
     func item(for identifier: NSFileProviderItemIdentifier, request: NSFileProviderRequest,
               completionHandler: @escaping (NSFileProviderItem?, Error?) -> Void) -> Progress {
         run(completionHandler) { [connection] in
-            let (fs, root) = try await connection.open()
-            if identifier == .rootContainer { return DiskItem.root(path: root) }
-            return try await DiskItem.lookup(Paths.path(for: identifier, root: root), fs: fs, root: root)
+            let (fs, paths) = try await connection.open()
+            if identifier == .rootContainer { return DiskItem.root(paths) }
+            return try await DiskItem.lookup(paths.path(for: identifier), fs: fs, paths: paths)
         }
     }
 
@@ -45,9 +45,9 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
         let domain = domain
         Task { [connection] in
             do {
-                let (fs, root) = try await connection.open()
-                let path = Paths.path(for: itemIdentifier, root: root)
-                let item = try await DiskItem.lookup(path, fs: fs, root: root)
+                let (fs, paths) = try await connection.open()
+                let path = try paths.path(for: itemIdentifier)
+                let item = try await DiskItem.lookup(path, fs: fs, paths: paths)
                 let folder = try NSFileProviderManager(for: domain)?.temporaryDirectoryURL() ?? FileManager.default.temporaryDirectory
                 let local = folder.appending(path: UUID().uuidString)
                 let size = max(item.file.size ?? 1, 1)
@@ -66,8 +66,8 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                     completionHandler: @escaping (NSFileProviderItem?, NSFileProviderItemFields, Bool, Error?) -> Void) -> Progress {
         Task { [connection] in
             do {
-                let (fs, root) = try await connection.open()
-                let parent = Paths.path(for: itemTemplate.parentItemIdentifier, root: root)
+                let (fs, paths) = try await connection.open()
+                let parent = try paths.path(for: itemTemplate.parentItemIdentifier)
                 let path = RemotePath.join(parent, itemTemplate.filename)
                 // Pastas e pacotes (.app, .bundle…) são diretórios; o pacote vem com o conteúdo junto.
                 let isDirectory = itemTemplate.contentType?.conforms(to: .directory) == true
@@ -85,7 +85,9 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 } else {
                     try await fs.createFile(path)
                 }
-                completionHandler(try await DiskItem.lookup(path, fs: fs, root: root), [], false, nil)
+                // Caminho reaproveitado (algo apagado por fora com o mesmo nome): item novo, identificador novo.
+                paths.store.removed(path)
+                completionHandler(try await DiskItem.lookup(path, fs: fs, paths: paths), [], false, nil)
             } catch {
                 await connection.failed(error)
                 completionHandler(nil, [], false, Self.map(error))
@@ -99,12 +101,13 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                     completionHandler: @escaping (NSFileProviderItem?, NSFileProviderItemFields, Bool, Error?) -> Void) -> Progress {
         Task { [connection] in
             do {
-                let (fs, root) = try await connection.open()
-                var path = Paths.path(for: item.itemIdentifier, root: root)
+                let (fs, paths) = try await connection.open()
+                var path = try paths.path(for: item.itemIdentifier)
                 if changedFields.contains(.filename) || changedFields.contains(.parentItemIdentifier) {
-                    let target = RemotePath.join(Paths.path(for: item.parentItemIdentifier, root: root), item.filename)
+                    let target = RemotePath.join(try paths.path(for: item.parentItemIdentifier), item.filename)
                     if target != path {
                         try await fs.move(path, to: target)
+                        paths.store.moved(from: path, to: target)
                         path = target
                     }
                 }
@@ -113,7 +116,7 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 }
                 // Campos que o servidor não guarda (etiquetas, datas de criação…) ficam só no Mac.
                 let ignored = changedFields.subtracting([.filename, .parentItemIdentifier, .contents])
-                completionHandler(try await DiskItem.lookup(path, fs: fs, root: root), ignored, false, nil)
+                completionHandler(try await DiskItem.lookup(path, fs: fs, paths: paths), ignored, false, nil)
             } catch {
                 await connection.failed(error)
                 completionHandler(nil, [], false, Self.map(error))
@@ -127,9 +130,10 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                     completionHandler: @escaping (Error?) -> Void) -> Progress {
         Task { [connection] in
             do {
-                let (fs, root) = try await connection.open()
-                let item = try await DiskItem.lookup(Paths.path(for: identifier, root: root), fs: fs, root: root)
+                let (fs, paths) = try await connection.open()
+                let item = try await DiskItem.lookup(paths.path(for: identifier), fs: fs, paths: paths)
                 try await fs.delete(item.file)
+                paths.store.removed(item.file.path)
                 completionHandler(nil)
             } catch {
                 await connection.failed(error)
@@ -169,13 +173,21 @@ actor Connection {
     private let account: String
     private var fs: (any FileSystem)?
     private var root = "/"
+    private let store: ItemIdentifiers
 
-    init(account: String) { self.account = account }
+    init(account: String) {
+        self.account = account
+        store = ItemIdentifiers(file: Self.sandbox(account).appending(path: "identifiers.json"))
+    }
 
-    func open() async throws -> (any FileSystem, String) {
-        if let fs { return (fs, root) }
+    private static func sandbox(_ account: String) -> URL {
+        URL.applicationSupportDirectory.appending(path: "Wormlink/\(account)")
+    }
+
+    func open() async throws -> (any FileSystem, Paths) {
+        if let fs { return (fs, Paths(store: store, root: root)) }
         guard let config = DiskConfig.load(account) else { throw WormlinkError.invalidBookmark }
-        let sandbox = URL.applicationSupportDirectory.appending(path: "Wormlink/\(account)")
+        let sandbox = Self.sandbox(account)
         let bookmark = try config.install(in: sandbox)
         // Sem interface na extensão: só vale o que o app já aceitou (chaves e certificados instalados acima).
         let trust = ConnectionTrust(hostKey: { _ in false }, certificate: { _ in false },
@@ -183,7 +195,7 @@ actor Connection {
         let opened = try await Connector.connect(bookmark, password: config.secret, trust: trust)
         fs = opened
         root = RemotePath.normalize(bookmark.path.isEmpty ? opened.homePath : bookmark.path)
-        return (opened, root)
+        return (opened, Paths(store: store, root: root))
     }
 
     /// Respostas do servidor (não existe, sem permissão…) mantêm a conexão; o resto (caiu, tempo esgotado,
@@ -201,39 +213,47 @@ actor Connection {
     }
 }
 
-enum Paths {
-    static func path(for identifier: NSFileProviderItemIdentifier, root: String) -> String {
-        identifier == .rootContainer ? root : RemotePath.normalize(identifier.rawValue)
+/// Converte identificadores ⇄ caminhos remotos; a raiz do favorito é sempre .rootContainer.
+struct Paths: Sendable {
+    let store: ItemIdentifiers
+    let root: String
+
+    func path(for identifier: NSFileProviderItemIdentifier) throws -> String {
+        if identifier == .rootContainer { return root }
+        guard let path = store.path(for: identifier.rawValue) else { throw NSFileProviderError(.noSuchItem) }
+        return path
     }
 
-    static func identifier(for path: String, root: String) -> NSFileProviderItemIdentifier {
-        RemotePath.normalize(path) == root ? .rootContainer : NSFileProviderItemIdentifier(RemotePath.normalize(path))
+    func identifier(for path: String) -> NSFileProviderItemIdentifier {
+        let path = RemotePath.normalize(path)
+        return path == root ? .rootContainer : NSFileProviderItemIdentifier(store.identifier(for: path))
     }
 }
 
 final class DiskItem: NSObject, NSFileProviderItem, @unchecked Sendable {
     let file: FileItem
-    let root: String
+    let paths: Paths
+    private var root: String { paths.root }
 
-    init(_ file: FileItem, root: String) {
+    init(_ file: FileItem, paths: Paths) {
         self.file = file
-        self.root = root
+        self.paths = paths
     }
 
-    static func root(path: String) -> DiskItem { DiskItem(FileItem(path: path, isDirectory: true), root: path) }
+    static func root(_ paths: Paths) -> DiskItem { DiskItem(FileItem(path: paths.root, isDirectory: true), paths: paths) }
 
-    /// Procura o item listando a pasta-mãe (o caminho é o identificador).
-    static func lookup(_ path: String, fs: any FileSystem, root: String) async throws -> DiskItem {
-        if RemotePath.normalize(path) == root { return .root(path: root) }
+    /// Procura o item listando a pasta-mãe.
+    static func lookup(_ path: String, fs: any FileSystem, paths: Paths) async throws -> DiskItem {
+        if RemotePath.normalize(path) == paths.root { return .root(paths) }
         guard let file = try await fs.list(RemotePath.parent(path)).first(where: { $0.path == RemotePath.normalize(path) }) else {
             throw WormlinkError.notFound(path)
         }
-        return DiskItem(file, root: root)
+        return DiskItem(file, paths: paths)
     }
 
-    var itemIdentifier: NSFileProviderItemIdentifier { Paths.identifier(for: file.path, root: root) }
+    var itemIdentifier: NSFileProviderItemIdentifier { paths.identifier(for: file.path) }
     var parentItemIdentifier: NSFileProviderItemIdentifier {
-        file.path == root ? .rootContainer : Paths.identifier(for: RemotePath.parent(file.path), root: root)
+        file.path == root ? .rootContainer : paths.identifier(for: RemotePath.parent(file.path))
     }
     var filename: String { file.path == root ? "Wormlink" : file.name }
     var contentType: UTType {
@@ -267,8 +287,8 @@ final class FolderEnumerator: NSObject, NSFileProviderEnumerator, @unchecked Sen
     func enumerateItems(for observer: NSFileProviderEnumerationObserver, startingAt page: NSFileProviderPage) {
         Task { [container, connection] in
             do {
-                let (fs, root) = try await connection.open()
-                let items = try await fs.list(Paths.path(for: container, root: root)).map { DiskItem($0, root: root) }
+                let (fs, paths) = try await connection.open()
+                let items = try await fs.list(paths.path(for: container)).map { DiskItem($0, paths: paths) }
                 observer.didEnumerate(items)
                 observer.finishEnumerating(upTo: nil)
             } catch {

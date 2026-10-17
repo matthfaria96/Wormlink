@@ -573,3 +573,30 @@
 "“%@” não existe." = "“%@” doesn't exist.";
 "“%@” pede mais informações" = "“%@” asks for more information";
 "“%@” é grande demais para o editor embutido (máximo 8 MB)." = "“%@” is too large for the built-in editor (8 MB maximum).";
+
+/* Cofres do Cryptomator */
+"Alterar a data" = "Changing the date";
+"As senhas não são iguais." = "The passwords don't match.";
+"Cofre" = "Vault";
+"Cofre do Cryptomator" = "Cryptomator vault";
+"Cofre “%@” desbloqueado" = "Vault “%@” unlocked";
+"Confirmar senha" = "Confirm password";
+"Desbloquear" = "Unlock";
+"Desbloquear “%@”" = "Unlock “%@”";
+"Desbloquear…" = "Unlock…";
+"Digite a senha do cofre do Cryptomator." = "Enter the password for the Cryptomator vault.";
+"Escolha um nome de pasta válido." = "Choose a valid folder name.";
+"Este cofre do Cryptomator não é suportado: %@" = "This Cryptomator vault isn't supported: %@";
+"Mover para dentro ou para fora de um cofre" = "Moving into or out of a vault";
+"Novo Cofre Criptografado" = "New Encrypted Vault";
+"Novo Cofre Criptografado…" = "New Encrypted Vault…";
+"Os arquivos guardados no cofre são criptografados antes de ir para o servidor. Ele abre no Cryptomator e no Cyberduck. Sem a senha não há como recuperá-los." = "Files stored in the vault are encrypted before they reach the server. It opens in Cryptomator and Cyberduck. Without the password there is no way to recover them.";
+"Retomar download" = "Resuming downloads";
+"Retomar envio" = "Resuming uploads";
+"Senha do cofre incorreta" = "Incorrect vault password";
+"Senha do cofre incorreta." = "Incorrect vault password.";
+"Trancar" = "Lock";
+"Use uma senha com pelo menos 8 caracteres." = "Use a password with at least 8 characters.";
+"chaves guardadas fora do cofre (Cryptomator Hub)" = "keys stored outside the vault (Cryptomator Hub)";
+"formato %lld" = "format %lld";
+"“%@” está danificado ou não pertence a este cofre." = "“%@” is damaged or doesn't belong to this vault.";

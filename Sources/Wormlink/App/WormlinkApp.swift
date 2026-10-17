@@ -94,6 +94,8 @@ struct WormlinkCommands: Commands {
             Button("Novo Arquivo…") { NotificationCenter.default.post(name: .wormlinkCreate, object: "file") }
                 .keyboardShortcut("n", modifiers: [.command, .option])
                 .disabled(files == nil)
+            Button("Novo Cofre Criptografado…") { NotificationCenter.default.post(name: .wormlinkNewVault, object: nil) }
+                .disabled(files == nil || files?.vault(at: files?.path ?? "/") != nil)
             Button("Renomear…") { NotificationCenter.default.post(name: .wormlinkRename, object: nil) }
                 .disabled(files?.selection.isEmpty ?? true)
             Button("Obter Informações") { window?.showInspector.toggle() }

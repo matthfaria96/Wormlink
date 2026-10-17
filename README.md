@@ -21,10 +21,15 @@ scripts/test-servers/start.sh /tmp/wormlink-servers     # SFTP, FTP/FTPS, WebDAV
 WORMLINK_SERVERS=/tmp/wormlink-servers \
 WORMLINK_AZURITE=1 WORMLINK_SWIFT=1 WORMLINK_SMB=1 WORMLINK_KBDINT=1 \
 WORMLINK_MOTO=127.0.0.1:5055 WORMLINK_AGENT=/caminho/do/ssh-agent.sock WORMLINK_BONJOUR=1 \
+WORMLINK_PYCRYPTOMATOR=/caminho/venv/bin/python \
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 ```
 
-Em compilações de depuração, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector .build/debug/Wormlink` abre essas telas direto (para capturas).
+`WORMLINK_PYCRYPTOMATOR` aponta para um Python com `pip install pycryptomator`: o teste de cofres cria e lê cofres nos dois sentidos para conferir a compatibilidade com outra implementação.
+
+Traduções: o português é a língua de origem e `Resources/en.lproj` traz o inglês. `scripts/check-translations.sh` lista os textos novos ainda sem tradução.
+
+Em compilações de depuração, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` abre essas telas direto (para capturas).
 
 ## Protocolos
 
@@ -79,6 +84,11 @@ Certificados TLS não confiáveis (FTPS, WebDAV) passam pelo SecTrust do sistema
 - **Linha de comando**: `wormlink` (em `Contents/SharedSupport/bin`, instalável pelo menu Wormlink). Comandos `servidores`, `ls`, `get`, `put`, `cat`, `mkdir`, `rm`, `mv` e `link`, com os servidores e senhas do app.
 - **AppleScript**: `server names`, `connect`, `list`, `upload` e `download`.
 - **Sistema**: serviço do Finder "Enviar com o Wormlink…", servidores no Spotlight e Handoff da pasta aberta (o Handoff entre Macs exige assinatura com Team ID).
+
+## Novidades (etapa 5)
+
+- **Inglês**: a interface segue o idioma do sistema (português ou inglês).
+- **Cofres do Cryptomator** (formato 8, e 7 para leitura e escrita): ao abrir a pasta de um cofre aparece "Desbloquear…". Lá dentro os nomes e o conteúdo são cifrados e decifrados na hora, em qualquer protocolo. "Novo Cofre Criptografado…" (Arquivo ou menu do painel) cria um cofre compatível com o Cryptomator e o Cyberduck. A senha pode ficar no Chaves.
 
 ## Fora do alcance sem conta Apple Developer
 

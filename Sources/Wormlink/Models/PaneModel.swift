@@ -23,7 +23,12 @@ final class PaneModel: Identifiable {
     }
 
     let id = UUID()
-    let fs: any FileSystem
+    /// Conexão do painel; `fs` é ela ou, dentro de um cofre desbloqueado, a vista decifrada.
+    let base: any FileSystem
+    private(set) var vaults: [CryptomatorFileSystem] = []
+    /// Pasta atual é um cofre do Cryptomator ainda trancado.
+    private(set) var lockedVault: String?
+    var fs: any FileSystem { vault(at: path) ?? base }
     let bookmark: Bookmark?
     private(set) var path: String
     private(set) var items: [FileItem] = []
@@ -52,13 +57,17 @@ final class PaneModel: Identifiable {
     var onNavigate: ((String) -> Void)?
 
     init(fs: any FileSystem, bookmark: Bookmark? = nil, path: String? = nil) {
-        self.fs = fs
+        base = fs
         self.bookmark = bookmark
         self.path = RemotePath.normalize(path ?? fs.homePath)
     }
 
+    /// Os itens são arquivos de verdade neste Mac (dentro de um cofre não são).
     var isLocal: Bool { fs is LocalFileSystem }
-    var title: String { isLocal ? Host.current().localizedName ?? String(localized: "Este Mac") : fs.title }
+    var isLocalConnection: Bool { base is LocalFileSystem }
+    var title: String { isLocalConnection ? Host.current().localizedName ?? String(localized: "Este Mac") : base.title }
+
+    func vault(at path: String) -> CryptomatorFileSystem? { vaults.first { $0.contains(path) } }
     var canGoBack: Bool { !back.isEmpty }
     var canGoForward: Bool { !forward.isEmpty }
 
@@ -127,12 +136,37 @@ final class PaneModel: Identifiable {
         do {
             items = try await fs.list(path)
             for folder in expanded { children[folder] = try? await fs.list(folder) }
+            lockedVault = vault(at: path) == nil && CryptomatorFileSystem.isVault(items) ? path : nil
             error = nil
             selection.formIntersection(rows.map(\.id))
         } catch {
             items = []
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: Cofres do Cryptomator
+
+    /// Conta no Chaves para a senha de um cofre (servidor + pasta).
+    func vaultAccount(_ root: String) -> String { "\(bookmark?.id.uuidString ?? "local")|\(RemotePath.normalize(root))" }
+
+    func unlockVault(password: String) async throws {
+        guard let root = lockedVault else { return }
+        vaults.append(try await CryptomatorFileSystem.unlock(base, at: root, password: password))
+        lockedVault = nil
+        await reload()
+    }
+
+    func lockVault() async {
+        guard let vault = vault(at: path) else { return }
+        vaults.removeAll { $0 === vault }
+        await go(to: RemotePath.parent(vault.root))
+    }
+
+    func createVault(named name: String, password: String) async throws {
+        let root = RemotePath.join(path, name)
+        vaults.append(try await CryptomatorFileSystem.create(base, at: root, password: password))
+        await go(to: root)
     }
 
     /// Abre ou fecha uma subpasta na própria lista (triângulo ao lado do nome).

@@ -81,7 +81,7 @@ final class WindowModel {
     /// Símbolo do título: o ícone do servidor conectado, ou o globo.
     var titleSymbol: String {
         for slot in [right, left] where !slot.showingServers {
-            if let files = slot.files, !files.isLocal { return files.bookmark?.icon.symbolName ?? "server.rack" }
+            if let files = slot.files, !files.isLocalConnection { return files.bookmark?.icon.symbolName ?? "server.rack" }
         }
         return "globe"
     }
@@ -89,7 +89,7 @@ final class WindowModel {
     /// Título da janela: o servidor conectado, ou "Servidores".
     var title: String {
         for slot in [right, left] where !slot.showingServers {
-            if let files = slot.files, !files.isLocal { return files.title }
+            if let files = slot.files, !files.isLocalConnection { return files.title }
         }
         return String(localized: "Servidores")
     }
@@ -103,7 +103,7 @@ final class WindowModel {
         defer { slot.connecting = nil }
         do {
             let fs = try await Connector.connect(bookmark, password: password, trust: TrustPrompter.trust)
-            if let old = slot.files, !old.isLocal { await old.fs.disconnect() }
+            if let old = slot.files, !old.isLocalConnection { await old.base.disconnect() }
             let pane = PaneModel(fs: fs, bookmark: bookmark)
             pane.onNavigate = { [weak self, weak slot] path in
                 guard let self, let slot else { return }
@@ -115,7 +115,7 @@ final class WindowModel {
             active = side(of: slot)
             app.recordConnection(bookmark)
             await pane.reload()
-            if let local = bookmark.localPath, let other = self.slot(other(side(of: slot))).files, other.isLocal {
+            if let local = bookmark.localPath, let other = self.slot(other(side(of: slot))).files, other.isLocalConnection {
                 await other.go(to: local)
             }
         } catch WormlinkError.authenticationFailed {
@@ -136,20 +136,20 @@ final class WindowModel {
     }
 
     func disconnect(_ slot: PaneSlot) async {
-        guard let files = slot.files, !files.isLocal else { slot.showingServers = true; return }
+        guard let files = slot.files, !files.isLocalConnection else { slot.showingServers = true; return }
         slot.files = nil
         slot.showingServers = true
-        await files.fs.disconnect()
+        await files.base.disconnect()
     }
 
     /// Volta o lado para os arquivos deste Mac.
     func showLocal(_ slot: PaneSlot, path: String? = nil) async {
-        if let files = slot.files, files.isLocal {
+        if let files = slot.files, files.isLocalConnection {
             slot.showingServers = false
             if let path { await files.go(to: path) }
             return
         }
-        if let files = slot.files { await files.fs.disconnect() }
+        if let files = slot.files { await files.base.disconnect() }
         let pane = PaneModel(fs: LocalFileSystem(), path: path)
         pane.onNavigate = { [weak self, weak slot] p in
             guard let self, let slot else { return }

@@ -65,3 +65,33 @@ public enum Keychain {
         SecItemAdd(add as CFDictionary, nil)
     }
 }
+
+// MARK: Senhas de cofres do Cryptomator
+
+extension Keychain {
+    private static func vaultQuery(_ account: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: "Wormlink Cryptomator",
+         kSecAttrAccount as String: account]
+    }
+
+    public static func vaultPassword(for account: String) -> String? {
+        var q = vaultQuery(account)
+        q[kSecReturnData as String] = true
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    public static func setVaultPassword(_ password: String, for account: String) {
+        SecItemDelete(vaultQuery(account) as CFDictionary)
+        var add = vaultQuery(account)
+        add[kSecValueData as String] = Data(password.utf8)
+        add[kSecAttrLabel as String] = "Wormlink: cofre \(RemotePath.name(String(account.split(separator: "|", maxSplits: 1).last ?? "")))"
+        SecItemAdd(add as CFDictionary, nil)
+    }
+
+    public static func deleteVaultPassword(for account: String) {
+        SecItemDelete(vaultQuery(account) as CFDictionary)
+    }
+}

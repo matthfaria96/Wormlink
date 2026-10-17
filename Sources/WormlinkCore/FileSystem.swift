@@ -87,12 +87,12 @@ extension FileSystem {
     public var canResumeUploads: Bool { false }
 
     public func download(_ path: String, to local: URL, offset: Int64, progress: @escaping @Sendable (Int64) -> Void) async throws {
-        guard offset == 0 else { throw WormlinkError.unsupportedOperation("Retomar download") }
+        guard offset == 0 else { throw WormlinkError.unsupportedOperation(String(localized: "Retomar download")) }
         try await download(path, to: local, progress: progress)
     }
 
     public func upload(_ local: URL, to path: String, offset: Int64, progress: @escaping @Sendable (Int64) -> Void) async throws {
-        guard offset == 0 else { throw WormlinkError.unsupportedOperation("Retomar envio") }
+        guard offset == 0 else { throw WormlinkError.unsupportedOperation(String(localized: "Retomar envio")) }
         try await upload(local, to: path, progress: progress)
     }
 
@@ -109,7 +109,7 @@ extension FileSystem {
     }
 
     public func setModificationDate(_ path: String, _ date: Date) async throws {
-        throw WormlinkError.unsupportedOperation("Alterar a data")
+        throw WormlinkError.unsupportedOperation(String(localized: "Alterar a data"))
     }
 
     /// Cria um arquivo vazio enviando um temporário de zero bytes.

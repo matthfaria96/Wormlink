@@ -28,6 +28,7 @@ struct FilesPane: View {
             header
             Divider()
             if !pane.filter.isEmpty || pane.searchResults != nil { searchBar; Divider() }
+            if pane.lockedVault != nil || pane.vault(at: pane.path) != nil { VaultBar(pane: pane); Divider() }
             Group {
                 switch pane.layout {
                 case .list: list
@@ -67,6 +68,9 @@ struct FilesPane: View {
             guard isActive else { return }
             newName = note.object as? String == "file" ? String(localized: "sem título.txt") : String(localized: "sem título")
             creating = note.object as? String == "file" ? .file : .folder
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .wormlinkNewVault)) { _ in
+            if isActive { Task { await VaultPrompts.create(in: pane) } }
         }
         .onReceive(NotificationCenter.default.publisher(for: .wormlinkCommand)) { note in
             if note.object as? UUID == pane.id { showCommand = true }
@@ -343,8 +347,8 @@ struct PlacesBar: View {
     @State private var isTargeted = false
 
     private var places: [String] {
-        if pane.isLocal { return app.localPlaces }
-        let home = RemotePath.normalize(pane.fs.homePath)
+        if pane.isLocalConnection { return app.localPlaces }
+        let home = RemotePath.normalize(pane.base.homePath)
         return [home] + (pane.bookmark.flatMap { app.bookmark(id: $0.id)?.places } ?? []).filter { $0 != home }
     }
 
@@ -389,13 +393,13 @@ struct PlacesBar: View {
     }
 
     private func placeName(_ place: String) -> String {
-        if pane.isLocal && place == FileManager.default.homeDirectoryForCurrentUser.path { return NSUserName() }
+        if pane.isLocalConnection && place == FileManager.default.homeDirectoryForCurrentUser.path { return NSUserName() }
         return place == "/" ? "/" : RemotePath.name(place)
     }
 
     private func placeSymbol(_ place: String) -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        guard pane.isLocal else { return place == RemotePath.normalize(pane.fs.homePath) ? "house" : "folder" }
+        guard pane.isLocalConnection else { return place == RemotePath.normalize(pane.base.homePath) ? "house" : "folder" }
         switch place {
         case home: return "house"
         case home + "/Downloads": return "arrow.down.circle"
@@ -410,7 +414,7 @@ struct PlacesBar: View {
     }
 
     private func add(_ place: String) {
-        if pane.isLocal {
+        if pane.isLocalConnection {
             if !app.localPlaces.contains(place) { app.localPlaces.append(place) }
         } else if let id = pane.bookmark?.id, var bookmark = app.bookmark(id: id), !bookmark.places.contains(place) {
             bookmark.places.append(place)
@@ -419,7 +423,7 @@ struct PlacesBar: View {
     }
 
     private func remove(_ place: String) {
-        if pane.isLocal {
+        if pane.isLocalConnection {
             app.localPlaces.removeAll { $0 == place }
         } else if let id = pane.bookmark?.id, var bookmark = app.bookmark(id: id) {
             bookmark.places.removeAll { $0 == place }
@@ -444,7 +448,7 @@ struct LocationMenu: View {
             Button {
                 slot.showingServers = true
             } label: { Label("Servidores", systemImage: "globe") }
-            if let files = slot.files, !files.isLocal {
+            if let files = slot.files, !files.isLocalConnection {
                 Divider()
                 Button {
                     slot.showingServers = false
@@ -464,7 +468,7 @@ struct LocationMenu: View {
 
     private var symbol: String {
         if slot.showingServers { return "globe" }
-        guard let files = slot.files, !files.isLocal else { return "internaldrive" }
+        guard let files = slot.files, !files.isLocalConnection else { return "internaldrive" }
         return files.bookmark?.icon.symbolName ?? "server.rack"
     }
 }
@@ -560,6 +564,9 @@ struct FileMenu: View {
         } else {
             Button("Nova Pasta…") { create(.folder) }
             Button("Novo Arquivo…") { create(.file) }
+            if pane.vault(at: pane.path) == nil {
+                Button("Novo Cofre Criptografado…") { Task { await VaultPrompts.create(in: pane) } }
+            }
             Divider()
             Button("Atualizar") { Task { await pane.reload() } }
             Toggle("Mostrar Arquivos Ocultos", isOn: Binding(get: { pane.showHidden }, set: { pane.showHidden = $0 }))
@@ -636,6 +643,7 @@ enum Terminal {
 extension Notification.Name {
     static let wormlinkCommand = Notification.Name("wormlink.command")
     static let wormlinkCreate = Notification.Name("wormlink.create")
+    static let wormlinkNewVault = Notification.Name("wormlink.newVault")
     static let wormlinkRename = Notification.Name("wormlink.rename")
 }
 

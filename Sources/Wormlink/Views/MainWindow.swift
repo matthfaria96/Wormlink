@@ -55,6 +55,12 @@ struct MainWindow: View {
                 if let folder = ProcessInfo.processInfo.environment["WORMLINK_PREVIEW_SSH"] { SSHKeyManager.folder = URL(filePath: folder) }
                 openSettings()
             case "bonjour": model.right.serversPage = .bonjour
+            case "vault":
+                let env = ProcessInfo.processInfo.environment
+                guard let files = model.left.files, let root = env["WORMLINK_PREVIEW_PATH"] else { break }
+                await files.go(to: root)
+                if let secret = env["WORMLINK_PREVIEW_SECRET"] { try? await files.unlockVault(password: secret) }
+                if let sub = env["WORMLINK_PREVIEW_SELECT"] { await files.go(to: RemotePath.join(root, sub)) }
             case "columns", "gallery", "single":
                 let env = ProcessInfo.processInfo.environment
                 guard let files = model.left.files else { break }

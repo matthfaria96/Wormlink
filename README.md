@@ -57,7 +57,7 @@ Certificados TLS não confiáveis (FTPS, WebDAV) passam pelo SecTrust do sistema
 - `Sources/WormlinkCore`: protocolos, favoritos, confiança (SSH/TLS) e cópia entre sistemas de arquivos.
 - `Sources/Wormlink`: app SwiftUI (`MainWindow`, `FilesPane`, `ServersPane`, `ServerEditor`, `InspectorView`).
 - `Vendor/`: Citadel e swift-nio-ssh com patches de RSA SHA-2 (veja `Vendor/README.md`).
-- `Resources/AppIcon.icon`: ícone do Icon Composer, com camadas geradas por `scripts/make-icon-art.swift`.
+- `Resources/AppIcon.icon`: ícone do Icon Composer; a camada de arte é gerada de `Resources/AppIcon-source.png` por `scripts/make-icon-art.swift`.
 
 ## Novidades (fases 1–8)
 

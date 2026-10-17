@@ -57,30 +57,7 @@ struct ServerIconView: View {
     }
 }
 
-/// Aba com sublinhado na cor de destaque ("Servidores" | "Quick Connect").
-struct UnderlineTab: View {
-    var title: String
-    var symbol: String
-    var selected: Bool
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(selected ? Color.wormlink : .secondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 5)
-                .overlay(alignment: .bottom) {
-                    Rectangle().fill(selected ? Color.wormlink : .clear).frame(height: 2)
-                }
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// Botão só com ícone, discreto, usado nas barras dos painéis.
+/// Botão só com ícone das barras dos painéis: borderless do sistema, com dica e rótulo de acessibilidade.
 struct BarButton: View {
     var title: String
     var symbol: String
@@ -88,12 +65,12 @@ struct BarButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 14)).frame(width: 26, height: 22).contentShape(.rect)
+            Label(title, systemImage: symbol)
         }
-        .buttonStyle(.plain)
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
         .foregroundStyle(.secondary)
         .help(title)
-        .accessibilityLabel(title)
     }
 }
 

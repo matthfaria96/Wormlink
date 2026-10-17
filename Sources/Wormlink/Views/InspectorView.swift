@@ -84,21 +84,23 @@ struct InspectorView: View {
             Text(FileItem.permissionString(mode)).font(.caption.monospaced()).foregroundStyle(.tertiary)
             Spacer()
             Button("Aplicar") { Task { await pane.setPermissions(item, mode: mode) } }
-                .buttonStyle(.glassProminent)
-                .tint(.wormlink)
+                .buttonStyle(.borderedProminent)
                 .disabled(mode == (item.mode ?? 0))
         }
         .padding(.top, 6)
     }
 
+    /// Seção do inspetor: GroupBox do sistema (conteúdo, não vidro — o vidro fica para a camada de navegação).
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            content()
+        GroupBox {
+            VStack(alignment: .leading, spacing: 8) {
+                content()
+            }
+            .padding(4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Text(title).font(.headline)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 14))
     }
 
     private func info(_ label: String, _ value: String) -> some View {

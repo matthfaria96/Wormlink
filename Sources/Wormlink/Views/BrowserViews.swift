@@ -63,7 +63,7 @@ struct ColumnBrowser: View {
                     Text(item.name).lineLimit(1).foregroundStyle(item.isHidden ? .secondary : .primary)
                     Spacer(minLength: 4)
                     if item.isDirectory {
-                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
                     }
                 }
                 .tag(item.id)

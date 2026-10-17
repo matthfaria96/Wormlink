@@ -9,7 +9,7 @@ struct VaultBar: View {
     var body: some View {
         HStack(spacing: 8) {
             if let vault = pane.vault(at: pane.path) {
-                Image(systemName: "lock.open.fill").foregroundStyle(Color.wormlink)
+                Image(systemName: "lock.open.fill").foregroundStyle(.tint)
                 Text("Cofre “\(RemotePath.name(vault.root))” desbloqueado").font(.callout)
                 Spacer()
                 Button("Trancar") { Task { await pane.lockVault() } }
@@ -24,7 +24,8 @@ struct VaultBar: View {
         .controlSize(.small)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.wormlink.opacity(0.08))
+        .background(.bar)
+        .accessibilityElement(children: .contain)
         .task(id: pane.lockedVault) {
             // Senha guardada no Chaves: abre sozinho, sem perguntar.
             guard let root = pane.lockedVault, let saved = Keychain.vaultPassword(for: pane.vaultAccount(root)) else { return }

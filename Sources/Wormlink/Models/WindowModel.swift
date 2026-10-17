@@ -78,20 +78,19 @@ final class WindowModel {
     var activeFiles: PaneModel? { slot(active).visibleFiles }
     var otherFiles: PaneModel? { slot(other(active)).visibleFiles }
 
-    /// Símbolo do título: o ícone do servidor conectado, ou o globo.
-    var titleSymbol: String {
-        for slot in [right, left] where !slot.showingServers {
-            if let files = slot.files, !files.isLocalConnection { return files.bookmark?.icon.symbolName ?? "server.rack" }
-        }
-        return "globe"
-    }
-
-    /// Título da janela: o servidor conectado, ou "Servidores".
+    /// Título da janela: o servidor conectado, ou o lado ativo, ou "Servidores".
     var title: String {
         for slot in [right, left] where !slot.showingServers {
             if let files = slot.files, !files.isLocalConnection { return files.title }
         }
-        return String(localized: "Servidores")
+        return activeFiles?.title ?? String(localized: "Servidores")
+    }
+
+    /// Subtítulo da janela: a pasta aberta no lado ativo.
+    var subtitle: String {
+        guard let files = activeFiles else { return "" }
+        if files.isLocalConnection { return (files.path as NSString).abbreviatingWithTildeInPath }
+        return files.path
     }
 
     // MARK: Conexão

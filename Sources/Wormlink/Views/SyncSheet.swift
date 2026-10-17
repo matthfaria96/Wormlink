@@ -45,12 +45,14 @@ struct SyncSheet: View {
                 leftToRight.toggle()
                 phase = .options
             } label: {
-                Image(systemName: "arrow.right").font(.title2.weight(.semibold))
+                Label("Inverter a direção", systemImage: "arrow.right")
+                    .labelStyle(.iconOnly)
+                    .fontWeight(.semibold)
                     .rotationEffect(.degrees(leftToRight ? 0 : 180))
-                    .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
-            .glassEffect(.regular.tint(Color.wormlink.opacity(0.35)).interactive(), in: .circle)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .controlSize(.large)
             .help("Inverter a direção")
             .disabled(phase != .options && phase != .preview)
             folderCard(destination, role: String(localized: "Destino"))
@@ -61,13 +63,14 @@ struct SyncSheet: View {
         VStack(spacing: 4) {
             Text(role).font(.caption).foregroundStyle(.secondary)
             Image(systemName: pane?.isLocal == false ? (pane?.bookmark?.icon.symbolName ?? "server.rack") : "desktopcomputer")
-                .font(.title2).foregroundStyle(Color.wormlink)
+                .font(.title2).foregroundStyle(.tint)
             Text(pane?.title ?? "—").font(.headline).lineLimit(1)
             Text(pane?.path ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.head)
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .background(.fill.quaternary, in: .rect(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Opções
@@ -79,8 +82,11 @@ struct SyncSheet: View {
             }
             Toggle("Apagar no destino o que não existe na origem", isOn: $options.deleteOrphans)
             TextField("Ignorar", text: $skipText, prompt: Text(".DS_Store, *.tmp, node_modules"))
-            Stepper(value: $options.timeOffset, in: -86_400...86_400, step: 3_600) {
-                LabeledContent("Diferença de fuso", value: options.timeOffset == 0 ? "Nenhuma" : "\(Int(options.timeOffset / 3_600)) h")
+            LabeledContent("Diferença de fuso") {
+                HStack(spacing: 6) {
+                    Text(options.timeOffset == 0 ? "Nenhuma" : "\(Int(options.timeOffset / 3_600)) h").monospacedDigit()
+                    Stepper("Diferença de fuso", value: $options.timeOffset, in: -86_400...86_400, step: 3_600).labelsHidden()
+                }
             }
         }
         .formStyle(.grouped)
@@ -171,16 +177,13 @@ struct SyncSheet: View {
             if phase == .preview && !changes.isEmpty {
                 Button("Sincronizar") { apply() }
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.glassProminent).tint(.wormlink)
                     .disabled(selected.isEmpty)
             } else if phase == .options {
                 Button("Comparar") { compare() }
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.glassProminent).tint(.wormlink)
                     .disabled(source == nil || destination == nil)
             }
         }
-        .controlSize(.large)
     }
 
     private var synchronizer: Synchronizer? {

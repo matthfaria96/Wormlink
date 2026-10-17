@@ -49,31 +49,37 @@ struct ServersPane: View {
         } message: { Text(slot.connectionError ?? "") }
     }
 
-    // MARK: Cabeçalho: 🌐 | Servidores ⚡ Quick Connect | grade
+    // MARK: Cabeçalho: local | [Servidores | Quick Connect] | lista/grade
+
+    /// Segmento escolhido; nenhum enquanto o editor ou a senha estão à frente.
+    private var tab: Binding<PaneSlot.ServersTab?> {
+        Binding(get: { slot.editing == nil && slot.passwordRequest == nil ? slot.serversTab : nil }, set: { tab in
+            slot.editing = nil
+            slot.passwordRequest = nil
+            slot.serversTab = tab ?? .servers
+        })
+    }
 
     private var header: some View {
         ZStack {
-            HStack(spacing: 0) {
-                UnderlineTab(title: String(localized: "Servidores"), symbol: "globe", selected: slot.serversTab == .servers && slot.editing == nil) {
-                    slot.editing = nil
-                    slot.passwordRequest = nil
-                    slot.serversTab = .servers
-                }
-                UnderlineTab(title: String(localized: "Quick Connect"), symbol: "bolt.fill", selected: slot.serversTab == .quickConnect && slot.editing == nil) {
-                    slot.editing = nil
-                    slot.passwordRequest = nil
-                    slot.serversTab = .quickConnect
-                }
+            Picker("Modo", selection: tab) {
+                Text("Servidores").tag(Optional(PaneSlot.ServersTab.servers))
+                Text("Quick Connect").tag(Optional(PaneSlot.ServersTab.quickConnect))
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
             HStack {
                 LocationMenu(window: window, slot: slot)
                 Spacer()
-                BarButton(title: slot.serversAsGrid ? String(localized: "Ver como lista") : String(localized: "Ver como grade"),
-                          symbol: slot.serversAsGrid ? "list.bullet" : "square.grid.2x2") { slot.serversAsGrid.toggle() }
+                if slot.serversTab == .servers && slot.editing == nil && slot.passwordRequest == nil {
+                    BarButton(title: slot.serversAsGrid ? String(localized: "Ver como lista") : String(localized: "Ver como grade"),
+                              symbol: slot.serversAsGrid ? "list.bullet" : "square.grid.2x2") { slot.serversAsGrid.toggle() }
+                }
             }
-            .padding(.horizontal, 10)
         }
-        .frame(height: 30)
+        .padding(.horizontal, 10)
+        .frame(height: 34)
     }
 
     // MARK: Lista
@@ -92,25 +98,27 @@ struct ServersPane: View {
         }
     }
 
-    @ViewBuilder
     private var serverList: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if slot.serversPage != .all { pageHeader }
+        List(selection: $slot.selectedServer) {
+            Section {
                 if slot.serversAsGrid {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 10)], spacing: 14) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 12) {
                         ForEach(filtered) { bookmark in tile(bookmark) }
                     }
-                    .padding(16)
+                    .padding(.vertical, 6)
+                    .listRowSeparator(.hidden)
                 } else {
                     ForEach(filtered) { bookmark in row(bookmark) }
                 }
-                if filtered.isEmpty { emptyState }
-                if slot.serversPage == .all && window.search.isEmpty {
-                    Divider().padding(.horizontal, 24).padding(.vertical, 8)
+                if filtered.isEmpty && window.search.isEmpty && slot.serversPage == .all { emptyState }
+            } header: {
+                if slot.serversPage != .all { pageHeader }
+            }
+            if slot.serversPage == .all && window.search.isEmpty {
+                Section("Coleções") {
                     ForEach(app.groups, id: \.self) { group in
                         let count = app.bookmarks.filter { $0.group == group }.count
-                        groupRow(group, symbol: "folder.fill", detail: count == 1 ? String(localized: "1 servidor") : String(localized: "\(count) servidores")) {
+                        groupRow(group, symbol: "folder", detail: count == 1 ? String(localized: "1 servidor") : String(localized: "\(count) servidores")) {
                             slot.serversPage = .group(group)
                         }
                         .dropDestination(for: String.self) { ids, _ in
@@ -119,6 +127,7 @@ struct ServersPane: View {
                         }
                         .contextMenu {
                             Button("Renomear Grupo…") { renamingGroup = group; groupName = group }
+                            Divider()
                             Button("Apagar Grupo", role: .destructive) { app.removeGroup(group) }
                         }
                     }
@@ -142,9 +151,26 @@ struct ServersPane: View {
                     }
                 }
             }
-            .padding(.vertical, 10)
         }
-        .scrollContentBackground(.hidden)
+        .listStyle(.inset)
+        .contextMenu(forSelectionType: UUID.self) { ids in
+            if let bookmark = filtered.first(where: { ids.contains($0.id) }) {
+                menu(for: bookmark)
+            } else {
+                Button("Novo Servidor…", action: newServer)
+                Button("Novo Grupo…") { groupName = ""; creatingGroup = true }
+            }
+        } primaryAction: { ids in
+            if let bookmark = filtered.first(where: { ids.contains($0.id) }) { connect(bookmark) }
+        }
+        .onChange(of: slot.selectedServer) { if slot.selectedServer != nil { window.active = window.side(of: slot) } }
+        .overlay {
+            if filtered.isEmpty && !window.search.isEmpty {
+                ContentUnavailableView.search(text: window.search)
+            } else if filtered.isEmpty && slot.serversPage != .all {
+                emptyState
+            }
+        }
     }
 
     private var pageHeader: some View {
@@ -152,20 +178,20 @@ struct ServersPane: View {
             Button {
                 slot.serversPage = .all
             } label: {
-                Label(pageTitle, systemImage: "chevron.left")
-                    .font(.system(size: 13, weight: .semibold))
+                Label(pageTitle, systemImage: "chevron.backward")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
+            .font(.headline)
+            .tint(.primary)
+            .help("Voltar aos Servidores")
             Spacer()
             if slot.serversPage == .history && !app.history.isEmpty {
-                Button("Limpar Histórico") { app.clearHistory() }.buttonStyle(.link).font(.system(size: 12))
+                Button("Limpar Histórico") { app.clearHistory() }.buttonStyle(.link)
             }
             if slot.serversPage == .cyberduck && !app.cyberduckCandidates.isEmpty {
-                Button("Importar Todos") { app.importFromCyberduck() }.buttonStyle(.link).font(.system(size: 12))
+                Button("Importar Todos") { app.importFromCyberduck() }.buttonStyle(.link)
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 8)
     }
 
     private var pageTitle: String {
@@ -179,42 +205,49 @@ struct ServersPane: View {
     }
 
     private func row(_ bookmark: Bookmark) -> some View {
-        let selected = slot.selectedServer == bookmark.id
-        return HStack(spacing: 10) {
+        HStack(spacing: 10) {
             ServerIconView(bookmark, size: 28)
-            Text(bookmark.displayName).font(.system(size: 13, weight: .medium)).lineLimit(1)
-            if app.mountedDisks.contains(bookmark.id) {
-                Image(systemName: "externaldrive.fill.badge.checkmark").foregroundStyle(.secondary).help("Montado no Finder")
+            VStack(alignment: .leading, spacing: 1) {
+                Text(bookmark.displayName).lineLimit(1)
+                Text(detail(for: bookmark)).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
             }
-            Spacer(minLength: 12)
-            Text(detail(for: bookmark)).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
+            Spacer(minLength: 8)
+            if app.mountedDisks.contains(bookmark.id) {
+                Image(systemName: "externaldrive.fill.badge.checkmark")
+                    .foregroundStyle(.secondary)
+                    .help("Montado no Finder")
+                    .accessibilityLabel("Montado no Finder")
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(selected ? Color.wormlink.opacity(0.22) : .clear, in: .rect(cornerRadius: 7))
-        .padding(.horizontal, 12)
-        .contentShape(.rect)
-        .onTapGesture(count: 2) { connect(bookmark) }
-        .onTapGesture { slot.selectedServer = bookmark.id; window.active = window.side(of: slot) }
+        .padding(.vertical, 2)
+        .tag(bookmark.id)
         .draggable(bookmark.id.uuidString)
-        .contextMenu { menu(for: bookmark) }
     }
 
+    /// Cartão da grade, com a seleção do Finder no modo ícones: fundo no ícone e nome destacado.
     private func tile(_ bookmark: Bookmark) -> some View {
         let selected = slot.selectedServer == bookmark.id
-        return VStack(spacing: 6) {
-            ServerIconView(bookmark, size: 56)
-            Text(bookmark.displayName).font(.system(size: 12, weight: .medium)).lineLimit(1)
-            Text(bookmark.hostname).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+        return VStack(spacing: 4) {
+            ServerIconView(bookmark, size: 52)
+                .padding(6)
+                .background(selected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 12, style: .continuous))
+            Text(bookmark.displayName)
+                .font(.callout)
+                .lineLimit(1)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .foregroundStyle(selected ? Color.white : Color.primary)
+                .background(selected ? Color.accentColor : .clear, in: .rect(cornerRadius: 4))
+            Text(detail(for: bookmark)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
         }
-        .padding(10)
         .frame(maxWidth: .infinity)
-        .glassEffect(selected ? .regular.tint(Color.wormlink.opacity(0.35)).interactive() : .regular.interactive(),
-                     in: .rect(cornerRadius: 14))
         .contentShape(.rect)
         .onTapGesture(count: 2) { connect(bookmark) }
         .onTapGesture { slot.selectedServer = bookmark.id }
+        .draggable(bookmark.id.uuidString)
         .contextMenu { menu(for: bookmark) }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
     private func detail(for bookmark: Bookmark) -> String {
@@ -225,42 +258,63 @@ struct ServersPane: View {
     }
 
     private func groupRow(_ title: String, symbol: String, detail: String, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .background(.quaternary, in: .rect(cornerRadius: 7))
-            Text(title).font(.system(size: 13)).foregroundStyle(.secondary)
-            Spacer()
-            Text(detail).font(.system(size: 13)).foregroundStyle(.secondary)
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+                    .background(.fill.tertiary, in: .rect(cornerRadius: 7, style: .continuous))
+                Text(title)
+                Spacer()
+                Text(detail).foregroundStyle(.secondary)
+                Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 2)
+            .contentShape(.rect)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 5)
-        .contentShape(.rect)
-        .onTapGesture(perform: action)
+        .buttonStyle(.plain)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: slot.serversPage == .history ? "clock" : slot.serversPage == .bonjour ? "bonjour" : "server.rack").font(.system(size: 30)).foregroundStyle(.tertiary)
-            Text(emptyText).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            if slot.serversPage == .all && window.search.isEmpty {
-                Button("Adicionar Servidor") { newServer() }.buttonStyle(.glassProminent).tint(.wormlink)
+        ContentUnavailableView {
+            Label(emptyTitle, systemImage: emptySymbol)
+        } description: {
+            if let emptyText { Text(emptyText) }
+        } actions: {
+            if slot.serversPage == .all {
+                Button("Adicionar Servidor", action: newServer)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .listRowSeparator(.hidden)
     }
 
-    private var emptyText: String {
-        if !window.search.isEmpty { return String(localized: "Nenhum servidor encontrado.") }
+    private var emptySymbol: String {
         switch slot.serversPage {
-        case .all: return String(localized: "Nenhum servidor ainda.\nAdicione um ou use o Quick Connect.")
-        case .history: return String(localized: "Nenhuma conexão recente.")
-        case .cyberduck: return String(localized: "Nenhum favorito novo do Cyberduck neste Mac.")
-        case .bonjour: return String(localized: "Nenhum servidor anunciado na rede local.\nSFTP, FTP, WebDAV e SMB aparecem aqui sozinhos.")
-        case .group: return String(localized: "Grupo vazio. Arraste servidores para cá\nou crie um com o botão +.")
+        case .history: "clock"
+        case .bonjour: "bonjour"
+        case .cyberduck: "tray"
+        case .group: "folder"
+        case .all: "server.rack"
+        }
+    }
+
+    private var emptyTitle: String {
+        switch slot.serversPage {
+        case .all: String(localized: "Nenhum Servidor")
+        case .history: String(localized: "Nenhuma Conexão Recente")
+        case .cyberduck: String(localized: "Nada para Importar")
+        case .bonjour: String(localized: "Procurando Servidores")
+        case .group: String(localized: "Grupo Vazio")
+        }
+    }
+
+    private var emptyText: String? {
+        switch slot.serversPage {
+        case .all: String(localized: "Adicione um ou use o Quick Connect.")
+        case .history: nil
+        case .cyberduck: String(localized: "Nenhum favorito novo do Cyberduck neste Mac.")
+        case .bonjour: String(localized: "SFTP, FTP, WebDAV e SMB anunciados na rede local aparecem aqui sozinhos.")
+        case .group: String(localized: "Arraste servidores para cá ou crie um com o botão +.")
         }
     }
 
@@ -291,6 +345,7 @@ struct ServersPane: View {
             Button("Adicionar aos Servidores") { app.save(bookmark) }
         }
         if app.bookmark(id: bookmark.id) != nil {
+            Divider()
             Button(app.mountedDisks.contains(bookmark.id) ? "Desmontar do Finder" : "Montar no Finder") {
                 Task { await app.toggleDisk(bookmark) }
             }
@@ -300,6 +355,7 @@ struct ServersPane: View {
             Button("Salvar como Droplet…") { Droplets.save(bookmark) }
         }
         if let url = bookmark.url {
+            Divider()
             Button("Copiar Endereço") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(url.absoluteString, forType: .string)
@@ -314,7 +370,7 @@ struct ServersPane: View {
     // MARK: Barra inferior: + | importar | editar
 
     private var bottomBar: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 12) {
             BarButton(title: String(localized: "Novo servidor"), symbol: "plus", action: newServer)
             BarButton(title: String(localized: "Novo grupo"), symbol: "folder.badge.plus") { groupName = ""; creatingGroup = true }
             BarButton(title: String(localized: "Editar servidor"), symbol: "pencil") {
@@ -324,10 +380,11 @@ struct ServersPane: View {
             Spacer()
             ImportMenu()
         }
-        .padding(.horizontal, 8)
-        .frame(height: 34)
+        .padding(.horizontal, 12)
+        .frame(height: 30)
     }
 
+    /// Aviso flutuante enquanto conecta: vidro sobre o conteúdo, como os HUDs do sistema.
     private func connectingOverlay(_ bookmark: Bookmark) -> some View {
         VStack(spacing: 12) {
             ServerIconView(bookmark, size: 48)
@@ -336,6 +393,7 @@ struct ServersPane: View {
         }
         .padding(28)
         .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Ações
@@ -364,8 +422,9 @@ struct ImportMenu: View {
         Menu {
             ImportMenuItems(app: app)
         } label: {
-            Image(systemName: "square.and.arrow.down.on.square").font(.system(size: 14))
+            Label("Importar e exportar servidores", systemImage: "square.and.arrow.down.on.square")
         }
+        .labelStyle(.iconOnly)
         .menuStyle(.button)
         .buttonStyle(.borderless)
         .tint(.secondary)
@@ -394,6 +453,7 @@ struct ImportMenuItems: View {
 
 // MARK: - Senha
 
+/// Pedido de senha no próprio painel, no desenho dos diálogos de autenticação do macOS.
 struct PasswordPrompt: View {
     @Environment(AppModel.self) private var app
     @State var request: PasswordRequest
@@ -401,31 +461,45 @@ struct PasswordPrompt: View {
     var window: WindowModel
 
     var body: some View {
-        VStack(spacing: 14) {
-            ServerIconView(request.bookmark, size: 56)
-            Text(request.bookmark.username.isEmpty
-                 ? "Digite usuário e senha para “\(request.bookmark.displayName)”."
-                 : "Digite a senha de “\(request.bookmark.username)” em “\(request.bookmark.displayName)”.")
-                .font(.callout)
-                .multilineTextAlignment(.center)
-            if request.failed {
-                Text("Senha incorreta. Tente de novo.").font(.caption).foregroundStyle(.red)
+        VStack(spacing: 16) {
+            ServerIconView(request.bookmark, size: 64)
+            VStack(spacing: 6) {
+                Text("Conectar a “\(request.bookmark.displayName)”").font(.headline)
+                Text(request.bookmark.username.isEmpty
+                     ? "Digite usuário e senha para “\(request.bookmark.displayName)”."
+                     : "Digite a senha de “\(request.bookmark.username)” em “\(request.bookmark.displayName)”.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if request.failed {
+                    Label("Senha incorreta. Tente de novo.", systemImage: "exclamationmark.circle.fill")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                }
             }
-            if request.bookmark.username.isEmpty {
-                TextField("Usuário", text: $request.bookmark.username).textFieldStyle(.roundedBorder)
+            VStack(spacing: 8) {
+                if request.bookmark.username.isEmpty {
+                    TextField("Usuário", text: $request.bookmark.username)
+                        .textContentType(.username)
+                }
+                SecureField(request.bookmark.connectionProtocol == .s3 ? "Secret Access Key" : "Senha", text: $request.password)
+                    .textContentType(.password)
+                    .onSubmit(submit)
             }
-            SecureField(request.bookmark.connectionProtocol == .s3 ? "Secret Access Key" : "Senha", text: $request.password)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit(submit)
+            .textFieldStyle(.roundedBorder)
+            .controlSize(.large)
             Toggle("Lembrar no Chaves", isOn: $request.remember)
                 .disabled(app.bookmark(id: request.bookmark.id) == nil)
+                .frame(maxWidth: .infinity, alignment: .leading)
             HStack {
-                Button("Cancelar") { slot.passwordRequest = nil }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Conectar", action: submit).keyboardShortcut(.defaultAction).buttonStyle(.glassProminent).tint(.wormlink)
+                Button("Cancelar") { slot.passwordRequest = nil }.keyboardShortcut(.cancelAction)
+                Button("Conectar", action: submit).keyboardShortcut(.defaultAction)
             }
+            .controlSize(.large)
         }
-        .frame(maxWidth: 320)
+        .frame(maxWidth: 300)
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

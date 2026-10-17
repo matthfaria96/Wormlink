@@ -162,7 +162,7 @@ private struct S3ObjectPanel: View {
             if busy { ProgressView().controlSize(.small) }
             Spacer()
             Button("Aplicar") { Task { await apply() } }
-                .buttonStyle(.glassProminent).tint(.wormlink)
+                .buttonStyle(.borderedProminent)
                 .disabled(info == saved || busy)
         }
     }
@@ -323,7 +323,7 @@ private struct S3BucketPanel: View {
             HStack {
                 Spacer()
                 Button("Aplicar") { run("Ciclo de vida salvo") { try await fs.setLifecycle(bucket, lifecycle) } }
-                    .buttonStyle(.glassProminent).tint(.wormlink)
+                    .buttonStyle(.borderedProminent)
                     .disabled(lifecycle == options?.lifecycle)
             }
         }

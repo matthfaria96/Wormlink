@@ -17,12 +17,12 @@ struct TransfersView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     if queue.activeCount > 0 {
-                        Button("Pausar Todas", systemImage: "pause.fill") { queue.pauseAll() }.buttonStyle(.glass)
+                        Button("Pausar Todas", systemImage: "pause.fill") { queue.pauseAll() }.buttonStyle(.bordered)
                     } else if queue.transfers.contains(where: { $0.state == .paused }) {
-                        Button("Continuar Todas", systemImage: "play.fill") { queue.resumeAll() }.buttonStyle(.glass)
+                        Button("Continuar Todas", systemImage: "play.fill") { queue.resumeAll() }.buttonStyle(.bordered)
                     }
                     Button("Limpar Concluídas") { queue.clearFinished() }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.bordered)
                         .disabled(queue.transfers.allSatisfy(\.isActive))
                 }
                 .padding(10)

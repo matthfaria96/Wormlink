@@ -2,3 +2,4 @@
 build/
 Reference/
 .DS_Store
+.claude/

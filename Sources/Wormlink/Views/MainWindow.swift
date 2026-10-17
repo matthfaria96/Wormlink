@@ -47,6 +47,25 @@ struct MainWindow: View {
             switch ProcessInfo.processInfo.environment["WORMLINK_PREVIEW"] {
             case "editor": model.right.editing = app.bookmarks.first.map { ServerDraft(bookmark: $0, isNew: false) }
             case "quick": model.right.serversTab = .quickConnect
+            case "protocols":
+                // Folha com todos os selos, como aparecem no menu de protocolo (para conferir as cores).
+                let sheet = VStack(alignment: .leading, spacing: 6) {
+                    ForEach(ConnectionProtocol.allCases) { proto in
+                        HStack { Image(nsImage: ProtocolBadge.image(ProtocolBadge.style(for: proto))); Text(proto.displayName) }
+                    }
+                    Divider()
+                    ForEach(PresetStore.all) { preset in
+                        HStack { Image(nsImage: ProtocolBadge.image(ProtocolBadge.style(for: preset))); Text(preset.name) }
+                    }
+                }
+                .font(.system(size: 13)).padding(14).frame(width: 300, alignment: .leading)
+                .background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark)
+                let renderer = ImageRenderer(content: sheet)
+                renderer.scale = 2
+                if let out = ProcessInfo.processInfo.environment["WORMLINK_PREVIEW_OUT"], let image = renderer.nsImage,
+                   let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(filePath: out))
+                }
             case "password": model.right.passwordRequest = app.bookmarks.dropFirst().first.map { PasswordRequest(bookmark: $0) }
             case "search":
                 let root = ProcessInfo.processInfo.environment["WORMLINK_PREVIEW_PATH"] ?? NSTemporaryDirectory()

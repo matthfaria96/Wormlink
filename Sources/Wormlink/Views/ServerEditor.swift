@@ -221,12 +221,14 @@ struct ConnectionFields: View {
             Picker("Protocolo", selection: kindBinding) {
                 Section("Protocolos") {
                     ForEach(ConnectionProtocol.allCases) { proto in
-                        Label(proto.displayName, systemImage: proto.symbolName).tag("proto:" + proto.rawValue)
+                        Label { Text(proto.displayName) } icon: { Image(nsImage: ProtocolBadge.image(ProtocolBadge.style(for: proto))) }
+                            .tag("proto:" + proto.rawValue)
                     }
                 }
                 Section("Serviços") {
                     ForEach(PresetStore.all) { preset in
-                        Label(preset.name, systemImage: preset.connectionProtocol.symbolName).tag("preset:" + preset.id)
+                        Label { Text(preset.name) } icon: { Image(nsImage: ProtocolBadge.image(ProtocolBadge.style(for: preset))) }
+                            .tag("preset:" + preset.id)
                     }
                 }
             }

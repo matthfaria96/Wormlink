@@ -45,3 +45,15 @@ import Testing
     let sftp = Bookmark(nickname: "S", connectionProtocol: .sftp, hostname: "h", username: "eu")
     #expect(Keychain.account(for: sftp) == "eu")
 }
+
+@Test func smbShareNamesWithSpaces() {
+    let output = """
+        Share                                           Type    Comments
+        -------------------------------
+        Meus Arquivos                                   Disk    pasta da família
+        IPC$                                            Pipe    IPC Service
+        ADMIN$                                          Disk    Remote Admin
+        Fotos                                           Disk
+        """
+    #expect(SMBFileSystem.parseShares(output) == ["Meus Arquivos", "Fotos"])
+}

@@ -178,9 +178,10 @@ public final class SMBFileSystem: FileSystem, @unchecked Sendable {
     /// Linhas "Nome  Disk  Comentário" da saída do smbutil (só discos, sem IPC$).
     static func parseShares(_ text: String) -> [String] {
         text.split(whereSeparator: \.isNewline).compactMap { line in
-            let parts = line.split(separator: " ", omittingEmptySubsequences: true)
-            guard parts.count >= 2, parts[1] == "Disk", !parts[0].hasSuffix("$") else { return nil }
-            return String(parts[0])
+            // O nome pode ter espaços ("Meus Arquivos   Disk   comentário"): vale o que vem antes da coluna Disk.
+            guard let match = line.firstMatch(of: /^(.+?)\s+Disk(\s|$)/) else { return nil }
+            let name = String(match.output.1).trimmingCharacters(in: .whitespaces)
+            return name.isEmpty || name.hasSuffix("$") ? nil : name
         }
     }
 

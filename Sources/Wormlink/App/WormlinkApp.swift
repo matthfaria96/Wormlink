@@ -59,15 +59,16 @@ struct WormlinkCommands: Commands {
     var app: AppModel
     @FocusedValue(\.windowModel) private var window
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     private var files: PaneModel? { window?.activeFiles }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("Sobre o Wormlink") { About.show() }
-        }
-        CommandGroup(after: .appSettings) {
-            Button("Instalar Ferramenta de Linha de Comando…") { CommandLineTool.install() }
+            Button("Sobre o Wormlink") {
+                UserDefaults.standard.set("about", forKey: "settingsTab")
+                openSettings()
+            }
         }
         CommandGroup(after: .newItem) {
             Button("Nova Aba") {
@@ -151,35 +152,6 @@ struct WormlinkCommands: Commands {
             Button("Transcript") { openWindow(id: "transcript") }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
         }
-    }
-}
-
-/// Painel "Sobre" com os créditos de quem tornou o Wormlink possível.
-enum About {
-    static func show() {
-        let credits = """
-        Wormlink é software livre, sob a GNU General Public License v3.
-
-        Funcionalidades baseadas no Cyberduck (© iterate GmbH, GPL-3.0) — cyberduck.io
-        Design inspirado no Transmit, da Panic Inc. — panic.com/transmit
-
-        Bibliotecas:
-        • Citadel — SSH/SFTP em Swift (MIT), Joannis Orlandos
-        • SwiftNIO, SwiftNIO SSH, SwiftNIO SSL (Apache 2.0), Apple Inc.
-        • swift-crypto, swift-log, swift-atomics, swift-collections, swift-system, swift-asn1 (Apache 2.0), Apple Inc.
-        • BigInt (MIT), Károly Lőrentey
-        • BoringSSL (licença OpenSSL/ISC), via swift-nio-ssl e swift-crypto
-        """
-        let text = NSMutableAttributedString(string: credits, attributes: [
-            .font: NSFont.systemFont(ofSize: 11),
-            .foregroundColor: NSColor.secondaryLabelColor,
-        ])
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .credits: text,
-            .applicationName: "Wormlink",
-            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): String(localized: "Conecte. Explore. Transfira."),
-        ])
-        NSApp.activate()
     }
 }
 

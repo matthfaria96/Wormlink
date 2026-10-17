@@ -8,10 +8,10 @@ struct SettingsView: View {
         TabView(selection: $tab) {
             Tab("Geral", systemImage: "gearshape", value: "general") { GeneralSettings() }
             Tab("Transferências", systemImage: "arrow.up.arrow.down", value: "transfers") { TransferSettingsView() }
-            Tab("Regras", systemImage: "line.3.horizontal.decrease.circle", value: "rules") { SkipRulesSettings() }
             Tab("Servidores", systemImage: "server.rack", value: "servers") { ServersSettings() }
             Tab("Nuvens", systemImage: "cloud", value: "clouds") { CloudSettings() }
-            Tab("Chaves", systemImage: "key", value: "keys") { KeysSettings() }
+            Tab("Chaves SSH", systemImage: "key", value: "keys") { KeysSettings() }
+            Tab("Sobre", systemImage: "info.circle", value: "about") { AboutSettings() }
         }
         .frame(width: 520)
     }
@@ -35,6 +35,13 @@ private struct GeneralSettings: View {
             Section {
                 Toggle("Avisar quando uma transferência terminar em segundo plano", isOn: $notify)
             }
+            Section {
+                LabeledContent("Ferramenta de linha de comando") {
+                    Button("Instalar…") { CommandLineTool.install() }
+                }
+            } footer: {
+                Text("Instala o comando wormlink para usar os servidores salvos no Terminal.")
+            }
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
@@ -51,7 +58,7 @@ private struct TransferSettingsView: View {
     @AppStorage("copyURLsAfterUpload") private var copyURLs = false
     @AppStorage("limitUploadKB") private var limitUpload = 0
     @AppStorage("limitDownloadKB") private var limitDownload = 0
-    @State private var asciiList = FTPFileSystem.asciiExtensions.sorted().joined(separator: " ")
+    @State private var editingRules = false
 
     var body: some View {
         Form {
@@ -86,18 +93,14 @@ private struct TransferSettingsView: View {
                 }
             }
             Section {
-                TextField("Extensões", text: $asciiList, axis: .vertical)
-                    .lineLimit(2...3)
-                    .onChange(of: asciiList) {
-                        let list = asciiList.split(whereSeparator: { $0 == " " || $0 == "," }).map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".")) }
-                        UserDefaults.standard.set(list.filter { !$0.isEmpty }, forKey: "asciiExtensions")
-                    }
-            } header: {
-                Text("FTP em modo ASCII")
+                LabeledContent("Itens ignorados") {
+                    Button("Editar…") { editingRules = true }
+                }
             } footer: {
-                Text("Usadas pelos servidores FTP com “Modo ASCII” ligado no editor.")
+                Text("Nomes como .DS_Store ficam de fora das transferências e sincronizações.")
             }
         }
+        .sheet(isPresented: $editingRules) { SkipRulesSheet() }
         .formStyle(.grouped)
         .scrollDisabled(true)
         .fixedSize(horizontal: false, vertical: true)
@@ -113,7 +116,8 @@ private struct TransferSettingsView: View {
 }
 
 /// Padrões ignorados: uma linha editável por padrão, com remover em cada linha (como as listas dos Ajustes do Sistema).
-private struct SkipRulesSettings: View {
+private struct SkipRulesSheet: View {
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("skipPatterns") private var stored = SkipRules.default.patterns.joined(separator: "\n")
     @State private var patterns: [String] = []
 
@@ -149,7 +153,14 @@ private struct SkipRulesSettings: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 440)
+        .frame(width: 440, height: 420)
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                Button("OK") { dismiss() }.keyboardShortcut(.defaultAction)
+            }
+            .padding([.horizontal, .bottom], 16)
+        }
         .onAppear { patterns = UserDefaults.standard.stringArray(forKey: "skipPatterns") ?? SkipRules.default.patterns }
     }
 
@@ -158,32 +169,18 @@ private struct SkipRulesSettings: View {
 
 private struct ServersSettings: View {
     @Environment(AppModel.self) private var app
-    @State private var imported = PresetStore.imported()
     @State private var importError: String?
 
     var body: some View {
         Form {
-            Section {
-                ForEach(imported) { preset in
-                    LabeledContent(preset.name, value: preset.connectionProtocol.displayName)
-                }
-                LabeledContent("Perfis do Cyberduck") {
-                    Button("Importar Perfil…") { importProfile() }
-                }
-                if let importError { Text(importError).foregroundStyle(.red) }
-            } header: {
-                Text("Perfis de conexão")
-            } footer: {
-                if imported.isEmpty {
-                    Text("Os serviços prontos (Wasabi, R2, Backblaze, Nextcloud…) aparecem no menu Protocolo do editor.")
-                }
-            }
             Section {
                 LabeledContent("Importar de outro app") {
                     Menu("Escolher") {
                         ForEach(ServerImporter.allCases) { source in
                             Button(source.title) { app.importServers(from: source) }
                         }
+                        Divider()
+                        Button("Perfil de Conexão do Cyberduck…") { importProfile() }
                     }
                     .fixedSize()
                 }
@@ -196,7 +193,9 @@ private struct ServersSettings: View {
             } header: {
                 Text("Importar e exportar")
             } footer: {
-                Text("Cyberduck, Transmit, FileZilla e WinSCP. O backup (.wormlinkservers) pode incluir as senhas.")
+                if let importError { Text(importError).foregroundStyle(.red) } else {
+                    Text("Cyberduck, Transmit, FileZilla e WinSCP. O backup (.wormlinkservers) pode incluir as senhas.")
+                }
             }
             Section {
                 Toggle("Mostrar servidores da rede local (Bonjour)", isOn: Binding(get: { app.showBonjour }, set: { app.showBonjour = $0 }))
@@ -227,7 +226,6 @@ private struct ServersSettings: View {
                 importError = "\(url.lastPathComponent): \(error.localizedDescription)"
             }
         }
-        imported = PresetStore.imported()
     }
 }
 
@@ -243,8 +241,11 @@ private struct CloudSettings: View {
     var body: some View {
         Form {
             Section {
-                Text("Cada nuvem exige um app cadastrado no provedor (gratuito). Use como endereço de retorno:")
-                Text(OAuthProvider.redirectURI).font(.body.monospaced()).textSelection(.enabled)
+                LabeledContent("Endereço de retorno") {
+                    Text(OAuthProvider.redirectURI).font(.body.monospaced()).textSelection(.enabled)
+                }
+            } footer: {
+                Text("Cada nuvem exige um app gratuito cadastrado no provedor, com este endereço de retorno.")
             }
             Section("Dropbox") {
                 TextField("App key", text: $dropbox)

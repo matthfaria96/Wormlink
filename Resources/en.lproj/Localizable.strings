@@ -666,3 +666,22 @@
 
 "Nenhum servidor salvo" = "No Saved Servers";
 "Salve um servidor para acessá-lo com um clique, ou use o Quick Connect para conectar sem salvar." = "Save a server to open it with one click, or use Quick Connect to connect without saving.";
+
+/* Sobre e Configurações reorganizadas */
+"Sobre" = "About";
+"Chaves SSH" = "SSH Keys";
+"Versão %@ (%@)" = "Version %1$@ (%2$@)";
+"Cliente de arquivos remotos para o Mac: SFTP, FTP, WebDAV, S3 e nuvens, em dois painéis." = "A remote files client for the Mac: SFTP, FTP, WebDAV, S3 and clouds, in two panes.";
+"Criado por Matheus Faria" = "Created by Matheus Faria";
+"Licenças de código aberto" = "Open-source licenses";
+"Software livre sob a GNU General Public License v3." = "Free software under the GNU General Public License v3.";
+"O Wormlink usa os projetos de código aberto abaixo. Os avisos de copyright e as licenças ficam aqui, como elas exigem. O layout é inspirado no Transmit, da Panic Inc., sem usar código ou imagens dele." = "Wormlink uses the open-source projects below. Their copyright notices and licenses are kept here as those licenses require. The layout is inspired by Panic Inc.'s Transmit, without using any of its code or images.";
+"Ferramenta de linha de comando" = "Command line tool";
+"Instalar…" = "Install…";
+"Instala o comando wormlink para usar os servidores salvos no Terminal." = "Installs the wormlink command so you can use your saved servers in Terminal.";
+"Itens ignorados" = "Ignored items";
+"Editar…" = "Edit…";
+"Nomes como .DS_Store ficam de fora das transferências e sincronizações." = "Names like .DS_Store are left out of transfers and syncs.";
+"Perfil de Conexão do Cyberduck…" = "Cyberduck Connection Profile…";
+"Endereço de retorno" = "Redirect address";
+"Cada nuvem exige um app gratuito cadastrado no provedor, com este endereço de retorno." = "Each cloud needs a free app registered with the provider, using this redirect address.";

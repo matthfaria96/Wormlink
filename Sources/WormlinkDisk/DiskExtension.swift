@@ -54,6 +54,7 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 try await fs.download(path, to: local) { done in progress.completedUnitCount = min(100, done * 100 / size) }
                 completionHandler(local, item, nil)
             } catch {
+                await connection.failed(error)
                 completionHandler(nil, nil, Self.map(error))
             }
         }
@@ -68,8 +69,17 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 let (fs, root) = try await connection.open()
                 let parent = Paths.path(for: itemTemplate.parentItemIdentifier, root: root)
                 let path = RemotePath.join(parent, itemTemplate.filename)
-                if itemTemplate.contentType == .folder {
+                // Pastas e pacotes (.app, .bundle…) são diretórios; o pacote vem com o conteúdo junto.
+                let isDirectory = itemTemplate.contentType?.conforms(to: .directory) == true
+                    || (url.flatMap { try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory } ?? false)
+                if isDirectory {
                     try await fs.createDirectory(path)
+                    if let url {
+                        let copier = Copier(from: LocalFileSystem(), to: fs)
+                        for child in try await LocalFileSystem().list(url.path) {
+                            try await copier.copy(child, into: path) { _ in }
+                        }
+                    }
                 } else if let url {
                     try await fs.upload(url, to: path) { _ in }
                 } else {
@@ -77,6 +87,7 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 }
                 completionHandler(try await DiskItem.lookup(path, fs: fs, root: root), [], false, nil)
             } catch {
+                await connection.failed(error)
                 completionHandler(nil, [], false, Self.map(error))
             }
         }
@@ -104,6 +115,7 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 let ignored = changedFields.subtracting([.filename, .parentItemIdentifier, .contents])
                 completionHandler(try await DiskItem.lookup(path, fs: fs, root: root), ignored, false, nil)
             } catch {
+                await connection.failed(error)
                 completionHandler(nil, [], false, Self.map(error))
             }
         }
@@ -120,6 +132,7 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
                 try await fs.delete(item.file)
                 completionHandler(nil)
             } catch {
+                await connection.failed(error)
                 completionHandler(Self.map(error))
             }
         }
@@ -130,8 +143,13 @@ final class WormlinkDiskExtension: NSObject, NSFileProviderReplicatedExtension, 
 
     private func run(_ completion: @escaping (NSFileProviderItem?, Error?) -> Void,
                      _ body: @escaping @Sendable () async throws -> NSFileProviderItem) -> Progress {
-        Task {
-            do { completion(try await body(), nil) } catch { completion(nil, Self.map(error)) }
+        Task { [connection] in
+            do {
+                completion(try await body(), nil)
+            } catch {
+                await connection.failed(error)
+                completion(nil, Self.map(error))
+            }
         }
         return Progress()
     }
@@ -168,7 +186,14 @@ actor Connection {
         return (opened, root)
     }
 
-    func reset() { fs = nil }
+    /// Respostas do servidor (não existe, sem permissão…) mantêm a conexão; o resto (caiu, tempo esgotado,
+    /// erro de rede) faz a próxima operação reconectar.
+    func failed(_ error: Error) {
+        switch error {
+        case WormlinkError.notFound, WormlinkError.server, WormlinkError.unsupportedOperation, WormlinkError.checksumMismatch: return
+        default: fs = nil
+        }
+    }
 
     func close() async {
         await fs?.disconnect()
@@ -247,7 +272,7 @@ final class FolderEnumerator: NSObject, NSFileProviderEnumerator, @unchecked Sen
                 observer.didEnumerate(items)
                 observer.finishEnumerating(upTo: nil)
             } catch {
-                await connection.reset()
+                await connection.failed(error)
                 observer.finishEnumeratingWithError(WormlinkDiskExtension.map(error))
             }
         }

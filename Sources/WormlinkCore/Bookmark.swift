@@ -17,7 +17,7 @@ public struct Bookmark: Codable, Hashable, Identifiable, Sendable {
     public var keyFile: String?
     /// Ícone e cor do cartão na grade de servidores.
     public var icon: ServerIcon = .globe
-    public var color: ServerColor = .violet
+    public var color: ServerColor = .green
     /// Pastas atalho deste servidor (barra de Places).
     public var places: [String] = []
     public var lastUsed: Date?
@@ -152,7 +152,7 @@ extension Bookmark {
         comment = try c.decodeIfPresent(String.self, forKey: .comment)
         keyFile = try c.decodeIfPresent(String.self, forKey: .keyFile)
         icon = (try? c.decodeIfPresent(ServerIcon.self, forKey: .icon)) ?? .globe
-        color = (try? c.decodeIfPresent(ServerColor.self, forKey: .color)) ?? .violet
+        color = (try? c.decodeIfPresent(ServerColor.self, forKey: .color)) ?? .green
         places = try c.decodeIfPresent([String].self, forKey: .places) ?? []
         lastUsed = try c.decodeIfPresent(Date.self, forKey: .lastUsed)
         plainHTTP = try c.decodeIfPresent(Bool.self, forKey: .plainHTTP) ?? false

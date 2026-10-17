@@ -175,8 +175,8 @@ struct GalleryBrowser: View {
                             let isCurrent = item.id == current?.id
                             Thumbnail(item: item, pane: pane, size: 64, remoteThumbnails: false)
                                 .frame(width: 76, height: 76)
-                                .background(isCurrent ? Color.wormlink.opacity(0.25) : .clear, in: .rect(cornerRadius: 8))
-                                .overlay { if isCurrent { RoundedRectangle(cornerRadius: 8).strokeBorder(Color.wormlink, lineWidth: 2) } }
+                                .background(isCurrent ? Color.accentColor.opacity(0.25) : .clear, in: .rect(cornerRadius: 8))
+                                .overlay { if isCurrent { RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor, lineWidth: 2) } }
                                 .contentShape(.rect)
                                 .onTapGesture(count: 2) { open(item) }
                                 .onTapGesture { pane.selection = [item.id]; activate() }

@@ -50,8 +50,9 @@ for lproj in Resources/*.lproj; do cp -R "$lproj" "$CONTENTS/Resources/"; done
 # Ícone do Icon Composer: Assets.car (camadas com Liquid Glass, modos escuro/tingido/transparente)
 # mais AppIcon.icns de reserva para sistemas e ferramentas que não leem o .car.
 # Caminhos absolutos: o actool roda como serviço compartilhado e resolve relativos no diretório dele.
-xcrun actool "$PWD/Resources/AppIcon.icon" --compile "$PWD/$CONTENTS/Resources" --platform macosx \
-  --minimum-deployment-target 26.0 --app-icon AppIcon --target-device mac \
+# O catálogo traz a cor de destaque (verde do ícone), usada pelo sistema nos controles quando o Mac está em "Multicor".
+xcrun actool "$PWD/Resources/AppIcon.icon" "$PWD/Resources/Assets.xcassets" --compile "$PWD/$CONTENTS/Resources" --platform macosx \
+  --minimum-deployment-target 26.0 --app-icon AppIcon --accent-color AccentColor --target-device mac \
   --output-partial-info-plist /tmp/wormlink-icon.plist >/dev/null
 
 # Ações do Atalhos (App Intents): o SwiftPM gera os .swiftconstvalues, mas não roda o processador

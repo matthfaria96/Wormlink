@@ -14,7 +14,6 @@ struct SettingsView: View {
             Tab("Chaves", systemImage: "key", value: "keys") { KeysSettings() }
         }
         .frame(width: 520)
-        .tint(.wormlink)
     }
 }
 

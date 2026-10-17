@@ -3,17 +3,21 @@ import UniformTypeIdentifiers
 import WormlinkCore
 
 extension Color {
-    /// Violeta dos portais do ícone.
-    static let wormlink = Color(red: 0.55, green: 0.36, blue: 1.0)
+    /// Verde do túnel do ícone (o mesmo da AccentColor do catálogo): mais escuro no claro, para ter contraste.
+    static let wormlink = Color(nsColor: NSColor(name: "wormlink") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.298, green: 0.761, blue: 0.165, alpha: 1)
+            : NSColor(srgbRed: 0.180, green: 0.604, blue: 0.122, alpha: 1)
+    })
 }
 
 extension ServerColor {
     var color: Color {
         switch self {
-        case .violet: .wormlink
+        case .violet: Color(red: 0.55, green: 0.36, blue: 1.0)
         case .blue: .blue
         case .teal: .teal
-        case .green: .green
+        case .green: .wormlink
         case .yellow: .yellow
         case .orange: .orange
         case .red: .red

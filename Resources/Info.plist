@@ -9,6 +9,8 @@
 		<string>pt-BR</string>
 		<string>en</string>
 	</array>
+	<key>NSAccentColorName</key>
+	<string>AccentColor</string>
 	<key>CFBundleDisplayName</key>
 	<string>Wormlink</string>
 	<key>CFBundleExecutable</key>

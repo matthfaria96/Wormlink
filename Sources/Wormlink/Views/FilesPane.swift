@@ -43,7 +43,7 @@ struct FilesPane: View {
             }
             .overlay { overlay }
         }
-        .background { if isDropTarget { Color.wormlink.opacity(0.08) } }
+        .background { if isDropTarget { Color.accentColor.opacity(0.08) } }
         .dropDestination(for: URL.self) { urls, _ in dropFromFinder(urls) } isTargeted: { isDropTarget = $0 }
         .quickLookPreview($previewURL)
         .alert("Renomear “\(renaming?.name ?? "")”", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
@@ -391,7 +391,7 @@ struct PlacesBar: View {
             .padding(.horizontal, 8)
         }
         .frame(height: 28)
-        .background(isTargeted ? Color.wormlink.opacity(0.15) : .clear)
+        .background(isTargeted ? Color.accentColor.opacity(0.15) : .clear)
         .dropDestination(for: PaneDrag.self) { drags, _ in
             let folders = drags.flatMap(\.paths).filter { p in window.pane(with: drags[0].pane)?.rows.contains { $0.item.path == p && $0.item.isDirectory } ?? false }
             guard drags.first?.pane == pane.id, !folders.isEmpty else { return false }

@@ -17,7 +17,6 @@ struct WormlinkApp: App {
         WindowGroup("Wormlink", id: "browser") {
             MainWindow()
                 .environment(app)
-                .tint(.wormlink)
                 .frame(minWidth: 760, minHeight: 460)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                     app.reloadFromDisk()
@@ -34,20 +33,19 @@ struct WormlinkApp: App {
         Window("Transferências", id: "transfers") {
             TransfersView()
                 .environment(app)
-                .tint(.wormlink)
                 .frame(minWidth: 420, minHeight: 260)
         }
         .defaultSize(width: 520, height: 360)
 
         WindowGroup("Editor", id: "text", for: UUID.self) { $id in
             if let id {
-                TextEditorWindow(id: id).environment(app).tint(.wormlink).frame(minWidth: 480, minHeight: 320)
+                TextEditorWindow(id: id).environment(app).frame(minWidth: 480, minHeight: 320)
             }
         }
         .defaultSize(width: 760, height: 600)
 
         Window("Transcript", id: "transcript") {
-            TranscriptView().tint(.wormlink)
+            TranscriptView()
         }
         .defaultSize(width: 760, height: 420)
 

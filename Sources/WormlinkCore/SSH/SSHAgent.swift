@@ -199,7 +199,7 @@ final class AgentPublicKey<A: AgentAlgorithm>: NIOSSHPublicKeyProtocol, NIOSSHUs
         return buffer.writeBytes(copy)
     }
 
-    static func read(from buffer: inout ByteBuffer) throws -> Self { throw WormlinkError.unsupportedOperation("Ler chave do agente") }
+    static func read(from buffer: inout ByteBuffer) throws -> Self { throw WormlinkError.unsupportedOperation(String(localized: "Ler chave do agente")) }
 }
 
 struct AgentSignature<A: AgentAlgorithm>: NIOSSHSignatureProtocol {
@@ -210,7 +210,7 @@ struct AgentSignature<A: AgentAlgorithm>: NIOSSHSignatureProtocol {
         buffer.writeInteger(UInt32(rawRepresentation.count)) + buffer.writeBytes(rawRepresentation)
     }
 
-    static func read(from buffer: inout ByteBuffer) throws -> Self { throw WormlinkError.unsupportedOperation("Ler assinatura do agente") }
+    static func read(from buffer: inout ByteBuffer) throws -> Self { throw WormlinkError.unsupportedOperation(String(localized: "Ler assinatura do agente")) }
 }
 
 // MARK: - Strings SSH em Data

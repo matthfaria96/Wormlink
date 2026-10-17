@@ -65,7 +65,7 @@ struct FilesPane: View {
         } message: { Text(pane.operationError ?? "") }
         .onReceive(NotificationCenter.default.publisher(for: .wormlinkCreate)) { note in
             guard isActive else { return }
-            newName = note.object as? String == "file" ? "sem título.txt" : "sem título"
+            newName = note.object as? String == "file" ? String(localized: "sem título.txt") : String(localized: "sem título")
             creating = note.object as? String == "file" ? .file : .folder
         }
         .onReceive(NotificationCenter.default.publisher(for: .wormlinkCommand)) { note in
@@ -202,7 +202,7 @@ struct FilesPane: View {
         .scrollContentBackground(.hidden)
         .contextMenu(forSelectionType: String.self) { ids in
             FileMenu(window: window, pane: pane, items: pane.rows.map(\.item).filter { ids.contains($0.id) },
-                     rename: startRename, create: { newName = $0 == .folder ? "sem título" : "sem título.txt"; creating = $0 },
+                     rename: startRename, create: { newName = $0 == .folder ? String(localized: "sem título") : String(localized: "sem título.txt"); creating = $0 },
                      preview: preview)
         } primaryAction: { ids in
             if let item = pane.rows.map(\.item).first(where: { ids.contains($0.id) }) { Task { await primaryAction(item) } }
@@ -218,7 +218,7 @@ struct FilesPane: View {
     /// Menu de contexto compartilhado pelas visualizações em colunas e galeria.
     private func menu(_ items: [FileItem]) -> AnyView {
         AnyView(FileMenu(window: window, pane: pane, items: items, rename: startRename,
-                         create: { newName = $0 == .folder ? "sem título" : "sem título.txt"; creating = $0 }, preview: preview))
+                         create: { newName = $0 == .folder ? String(localized: "sem título") : String(localized: "sem título.txt"); creating = $0 }, preview: preview))
     }
 
     // MARK: Ícones
@@ -245,7 +245,7 @@ struct FilesPane: View {
                     .draggable(PaneDrag(pane: pane.id, paths: dragPaths(for: row.item)))
                     .contextMenu {
                         FileMenu(window: window, pane: pane, items: [row.item], rename: startRename,
-                                 create: { newName = $0 == .folder ? "sem título" : "sem título.txt"; creating = $0 }, preview: preview)
+                                 create: { newName = $0 == .folder ? String(localized: "sem título") : String(localized: "sem título.txt"); creating = $0 }, preview: preview)
                     }
                 }
             }
@@ -440,7 +440,7 @@ struct LocationMenu: View {
         Menu {
             Button {
                 Task { await window.showLocal(slot) }
-            } label: { Label(Host.current().localizedName ?? "Este Mac", systemImage: "desktopcomputer") }
+            } label: { Label(Host.current().localizedName ?? String(localized: "Este Mac"), systemImage: "desktopcomputer") }
             Button {
                 slot.showingServers = true
             } label: { Label("Servidores", systemImage: "globe") }
@@ -524,7 +524,7 @@ struct FileMenu: View {
             }
             if let s3 = pane.fs as? S3FileSystem, items.allSatisfy({ !$0.isDirectory }) {
                 Menu("Copiar Link Temporário") {
-                    ForEach([("Válido por 1 Hora", 3600.0), ("Válido por 1 Dia", 86_400.0), ("Válido por 7 Dias", 604_800.0)], id: \.0) { title, seconds in
+                    ForEach([(String(localized: "Válido por 1 Hora"), 3600.0), (String(localized: "Válido por 1 Dia"), 86_400.0), (String(localized: "Válido por 7 Dias"), 604_800.0)], id: \.0) { title, seconds in
                         Button(title) {
                             Task {
                                 var links: [String] = []
@@ -543,7 +543,7 @@ struct FileMenu: View {
                             for item in items { links.append(try await sharing.sharedLink(item.path).absoluteString) }
                             copy(links)
                         } catch {
-                            pane.operationError = "Não foi possível criar o link: \(error.localizedDescription)"
+                            pane.operationError = String(localized: "Não foi possível criar o link: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -576,7 +576,7 @@ struct FileMenu: View {
 
     private func openInternal(_ item: FileItem) {
         guard let id = app.openText(item, from: pane.fs) else {
-            pane.operationError = "“\(item.name)” é grande demais para o editor embutido (máximo 8 MB)."
+            pane.operationError = String(localized: "“\(item.name)” é grande demais para o editor embutido (máximo 8 MB).")
             return
         }
         openWindow(id: "text", value: id)
@@ -590,17 +590,17 @@ struct FileMenu: View {
         let panel = NSOpenPanel()
         panel.directoryURL = URL(filePath: "/Applications")
         panel.allowedContentTypes = [.application]
-        panel.prompt = "Editar"
+        panel.prompt = String(localized: "Editar")
         guard panel.runModal() == .OK, let app = panel.url else { return }
         Task { await edit(item, with: app) }
     }
 
     private func confirmDelete() {
         let alert = NSAlert()
-        alert.messageText = items.count == 1 ? "Apagar “\(items[0].name)”?" : "Apagar os \(items.count) itens selecionados?"
-        alert.informativeText = pane.isLocal ? "Os itens vão para o Lixo." : "Esta ação não pode ser desfeita."
-        alert.addButton(withTitle: pane.isLocal ? "Mover para o Lixo" : "Apagar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.messageText = items.count == 1 ? String(localized: "Apagar “\(items[0].name)”?") : String(localized: "Apagar os \(items.count) itens selecionados?")
+        alert.informativeText = pane.isLocal ? String(localized: "Os itens vão para o Lixo.") : String(localized: "Esta ação não pode ser desfeita.")
+        alert.addButton(withTitle: pane.isLocal ? String(localized: "Mover para o Lixo") : String(localized: "Apagar"))
+        alert.addButton(withTitle: String(localized: "Cancelar"))
         alert.buttons.first?.hasDestructiveAction = true
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let targets = items

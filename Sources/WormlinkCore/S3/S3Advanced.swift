@@ -15,10 +15,10 @@ public enum S3CannedACL: String, CaseIterable, Sendable {
     public var title: String {
         switch self {
         case .private: "Privado"
-        case .publicRead: "Leitura pública"
-        case .publicReadWrite: "Leitura e gravação públicas"
-        case .authenticatedRead: "Leitura por usuários AWS"
-        case .bucketOwnerFullControl: "Controle total do dono do bucket"
+        case .publicRead: String(localized: "Leitura pública")
+        case .publicReadWrite: String(localized: "Leitura e gravação públicas")
+        case .authenticatedRead: String(localized: "Leitura por usuários AWS")
+        case .bucketOwnerFullControl: String(localized: "Controle total do dono do bucket")
         }
     }
 
@@ -35,9 +35,9 @@ public enum S3CannedACL: String, CaseIterable, Sendable {
 
 public enum S3StorageClass {
     public static let all: [(id: String, title: String)] = [
-        ("STANDARD", "Padrão"), ("INTELLIGENT_TIERING", "Inteligente"), ("STANDARD_IA", "Infrequente"),
-        ("ONEZONE_IA", "Infrequente, 1 zona"), ("GLACIER_IR", "Glacier Instantâneo"),
-        ("GLACIER", "Glacier Flexível"), ("DEEP_ARCHIVE", "Glacier Profundo"), ("REDUCED_REDUNDANCY", "Redundância reduzida"),
+        ("STANDARD", String(localized: "Padrão")), ("INTELLIGENT_TIERING", String(localized: "Inteligente")), ("STANDARD_IA", String(localized: "Infrequente")),
+        ("ONEZONE_IA", String(localized: "Infrequente, 1 zona")), ("GLACIER_IR", String(localized: "Glacier Instantâneo")),
+        ("GLACIER", String(localized: "Glacier Flexível")), ("DEEP_ARCHIVE", String(localized: "Glacier Profundo")), ("REDUCED_REDUNDANCY", String(localized: "Redundância reduzida")),
     ]
 
     public static func title(_ id: String) -> String { all.first { $0.id == id }?.title ?? id }
@@ -105,7 +105,7 @@ extension S3FileSystem {
 
     /// Link temporário para baixar sem credenciais (até 7 dias, o máximo da SigV4).
     public func presignedURL(_ path: String, expires: TimeInterval) async throws -> URL {
-        guard let (bucket, key) = split(path), !key.isEmpty else { throw WormlinkError.unsupportedOperation("Assinar uma pasta") }
+        guard let (bucket, key) = split(path), !key.isEmpty else { throw WormlinkError.unsupportedOperation(String(localized: "Assinar uma pasta")) }
         let region = try await region(of: bucket)
         let seconds = Int(min(max(expires, 1), 604_800))
         return try await credentials.current().presign(url(bucket: bucket, key: key, region: region), region: region, expires: seconds)

@@ -113,10 +113,10 @@ enum FileIcons {
     }
 
     static func kind(of item: FileItem) -> String {
-        if item.isDirectory { return "Pasta" }
-        if item.isSymlink { return "Link simbólico" }
+        if item.isDirectory { return String(localized: "Pasta") }
+        if item.isSymlink { return String(localized: "Link simbólico") }
         let ext = (item.name as NSString).pathExtension
-        return UTType(filenameExtension: ext)?.localizedDescription ?? "Documento"
+        return UTType(filenameExtension: ext)?.localizedDescription ?? String(localized: "Documento")
     }
 }
 

@@ -21,12 +21,12 @@ struct InspectorView: View {
                     }
                     .frame(maxWidth: .infinity)
 
-                    section("Informações") {
-                        info("Tamanho", item.size.map { "\($0.formatted(.byteCount(style: .file))) (\($0.formatted()) bytes)" } ?? "—")
-                        info("Modificado", item.modified?.formatted(date: .long, time: .shortened) ?? "—")
-                        info("Onde", RemotePath.parent(item.path))
-                        if let target = item.linkTarget { info("Aponta para", target) }
-                        if let owner = item.owner { info("Dono", owner + (item.group.map { " : \($0)" } ?? "")) }
+                    section(String(localized: "Informações")) {
+                        info(String(localized: "Tamanho"), item.size.map { "\($0.formatted(.byteCount(style: .file))) (\($0.formatted()) bytes)" } ?? "—")
+                        info(String(localized: "Modificado"), item.modified?.formatted(date: .long, time: .shortened) ?? "—")
+                        info(String(localized: "Onde"), RemotePath.parent(item.path))
+                        if let target = item.linkTarget { info(String(localized: "Aponta para"), target) }
+                        if let owner = item.owner { info(String(localized: "Dono"), owner + (item.group.map { " : \($0)" } ?? "")) }
                         if let bookmark = pane.bookmark, let url = bookmark.publicURL(for: item.path) {
                             info("URL", url.absoluteString)
                         }
@@ -37,7 +37,7 @@ struct InspectorView: View {
                     }
 
                     if pane.fs.supportsPermissions, item.mode != nil {
-                        section("Permissões") {
+                        section(String(localized: "Permissões")) {
                             permissions(pane: pane, item: item)
                         }
                     }
@@ -67,7 +67,7 @@ struct InspectorView: View {
                 Text("Gravar").font(.caption).foregroundStyle(.secondary)
                 Text("Executar").font(.caption).foregroundStyle(.secondary)
             }
-            ForEach(Array(["Dono", "Grupo", "Todos"].enumerated()), id: \.offset) { index, who in
+            ForEach(Array([String(localized: "Dono"), String(localized: "Grupo"), String(localized: "Todos")].enumerated()), id: \.offset) { index, who in
                 GridRow {
                     Text(who).font(.callout).gridColumnAlignment(.leading)
                     ForEach(0..<3) { bit in

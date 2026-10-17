@@ -24,7 +24,8 @@ final class AppModel {
             }
         } catch {
             let alert = NSAlert(error: error)
-            alert.messageText = "Não foi possível \(mountedDisks.contains(bookmark.id) ? "desmontar" : "montar") “\(bookmark.displayName)”"
+            alert.messageText = mountedDisks.contains(bookmark.id) ? String(localized: "Não foi possível desmontar “\(bookmark.displayName)”")
+                : String(localized: "Não foi possível montar “\(bookmark.displayName)”")
             alert.runModal()
         }
         await refreshDisks()
@@ -216,7 +217,7 @@ final class AppModel {
         var location = source.isAvailable ? source.defaultLocation : nil
         if location == nil {
             let panel = NSOpenPanel()
-            panel.message = "Escolha os servidores do \(source.title) para importar."
+            panel.message = String(localized: "Escolha os servidores do \(source.title) para importar.")
             panel.canChooseDirectories = source == .transmit || source == .cyberduck
             guard panel.runModal() == .OK, let url = panel.url else { return }
             location = url
@@ -224,36 +225,36 @@ final class AppModel {
         do {
             let entries = try source.read(location)
             let added = merge(entries)
-            inform("\(added == 1 ? "1 servidor importado" : "\(added) servidores importados") do \(source.title)",
-                   entries.count > added ? "\(entries.count - added) já estavam no Wormlink." : nil)
+            inform(added == 1 ? String(localized: "1 servidor importado do \(source.title)") : String(localized: "\(added) servidores importados do \(source.title)"),
+                   entries.count > added ? String(localized: "\(entries.count - added) já estavam no Wormlink.") : nil)
         } catch {
-            inform("Não foi possível importar do \(source.title)", error.localizedDescription)
+            inform(String(localized: "Não foi possível importar do \(source.title)"), error.localizedDescription)
         }
     }
 
     func exportServers() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Servidores do Wormlink.wormlinkservers"
-        let passwords = NSButton(checkboxWithTitle: "Incluir senhas (o arquivo fica legível só por você)", target: nil, action: nil)
+        panel.nameFieldStringValue = String(localized: "Servidores do Wormlink.wormlinkservers")
+        let passwords = NSButton(checkboxWithTitle: String(localized: "Incluir senhas (o arquivo fica legível só por você)"), target: nil, action: nil)
         panel.accessoryView = passwords
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try ServerBackup(bookmarks: bookmarks, includePasswords: passwords.state == .on).write(to: url)
         } catch {
-            inform("Não foi possível exportar", error.localizedDescription)
+            inform(String(localized: "Não foi possível exportar"), error.localizedDescription)
         }
     }
 
     func restoreServers() {
         let panel = NSOpenPanel()
-        panel.message = "Escolha um backup de servidores do Wormlink."
+        panel.message = String(localized: "Escolha um backup de servidores do Wormlink.")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let backup = try ServerBackup.read(url)
             let added = merge(backup.bookmarks.map { ($0, backup.passwords?[$0.id.uuidString]) })
-            inform(added == 1 ? "1 servidor restaurado" : "\(added) servidores restaurados", nil)
+            inform(added == 1 ? String(localized: "1 servidor restaurado") : String(localized: "\(added) servidores restaurados"), nil)
         } catch {
-            inform("Não foi possível restaurar", error.localizedDescription)
+            inform(String(localized: "Não foi possível restaurar"), error.localizedDescription)
         }
     }
 

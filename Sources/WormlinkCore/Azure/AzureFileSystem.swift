@@ -221,7 +221,7 @@ public final class AzureFileSystem: FileSystem {
 
     public func move(_ path: String, to newPath: String) async throws {
         guard let (container, blob) = split(path), let (newContainer, newBlob) = split(newPath), !blob.isEmpty else {
-            throw WormlinkError.unsupportedOperation("Renomear contêineres")
+            throw WormlinkError.unsupportedOperation(String(localized: "Renomear contêineres"))
         }
         let children = try await allBlobs(container, prefix: blob + "/")
         let pairs = children.isEmpty ? [(blob, newBlob)] : children.map { ($0, newBlob + "/" + $0.dropFirst(blob.count + 1)) }
@@ -279,7 +279,7 @@ public final class AzureFileSystem: FileSystem {
     }
 
     public func upload(_ local: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
-        guard let (container, blob) = split(path), !blob.isEmpty else { throw WormlinkError.unsupportedOperation("Enviar para a raiz") }
+        guard let (container, blob) = split(path), !blob.isEmpty else { throw WormlinkError.unsupportedOperation(String(localized: "Enviar para a raiz")) }
         let size = Int64((try? local.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         let reader = try FileHandle(forReadingFrom: local)
         defer { try? reader.close() }

@@ -20,7 +20,7 @@ enum Disk {
 
     static func mount(_ bookmark: Bookmark) async throws {
         guard FileManager.default.fileExists(atPath: extensionPath) else {
-            throw WormlinkError.unsupportedOperation("Montar no Finder fora do Wormlink.app")
+            throw WormlinkError.unsupportedOperation(String(localized: "Montar no Finder fora do Wormlink.app"))
         }
         // Conecta uma vez no app: aqui dá para perguntar sobre chaves, certificados e frases secretas.
         let fs = try await Connector.connect(bookmark, password: Keychain.password(for: bookmark), trust: TrustPrompter.trust)
@@ -45,13 +45,13 @@ enum Disk {
     @MainActor
     static func explainActivation(_ bookmark: Bookmark) {
         let alert = NSAlert()
-        alert.messageText = "“\(bookmark.displayName)” foi montado no Finder"
+        alert.messageText = String(localized: "“\(bookmark.displayName)” foi montado no Finder")
         alert.informativeText = """
         Ele aparece na barra lateral do Finder, em Locais. Se for a primeira vez, ative o Wormlink Disk em \
         Ajustes do Sistema › Geral › Itens de Início e Extensões › Provedores de Arquivos.
         """
-        alert.addButton(withTitle: "Mostrar no Finder")
-        alert.addButton(withTitle: "Abrir Ajustes do Sistema")
+        alert.addButton(withTitle: String(localized: "Mostrar no Finder"))
+        alert.addButton(withTitle: String(localized: "Abrir Ajustes do Sistema"))
         alert.addButton(withTitle: "OK")
         switch alert.runModal() {
         case .alertFirstButtonReturn: Task { await reveal(bookmark) }

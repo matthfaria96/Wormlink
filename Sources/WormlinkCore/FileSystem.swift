@@ -78,7 +78,7 @@ public protocol FileSystem: AnyObject, Sendable {
 
 extension FileSystem {
     public func setPermissions(_ path: String, mode: UInt16) async throws {
-        throw WormlinkError.unsupportedOperation("Alterar permissões")
+        throw WormlinkError.unsupportedOperation(String(localized: "Alterar permissões"))
     }
 
     public var supportsPermissions: Bool { false }
@@ -105,7 +105,7 @@ extension FileSystem {
     public var supportsCommands: Bool { false }
 
     public func execute(_ command: String) async throws -> String {
-        throw WormlinkError.unsupportedOperation("Enviar comandos")
+        throw WormlinkError.unsupportedOperation(String(localized: "Enviar comandos"))
     }
 
     public func setModificationDate(_ path: String, _ date: Date) async throws {
@@ -139,20 +139,20 @@ public enum WormlinkError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidBookmark: "O favorito não pôde ser lido."
-        case .unsupportedProtocol(let name): "O protocolo \(name) ainda não está disponível nesta versão do Wormlink."
-        case .authenticationFailed: "Usuário ou senha incorretos."
-        case .server(let status, let message): "O servidor respondeu \(status): \(message)"
-        case .invalidResponse: "Resposta inesperada do servidor."
-        case .notFound(let path): "“\(path)” não existe."
-        case .hostKeyRejected: "A chave do servidor não foi aceita."
-        case .unsupportedOperation(let name): "\(name) não é suportado por este protocolo."
-        case .connectionClosed: "O servidor encerrou a conexão."
-        case .timedOut: "O servidor demorou demais para responder."
-        case .checksumMismatch(let name): "A verificação de “\(name)” falhou: o arquivo no destino é diferente da origem."
-        case .awsProfileNotFound(let name): "O perfil “\(name)” não foi encontrado (ou não tem chaves) em ~/.aws/credentials ou ~/.aws/config."
+        case .invalidBookmark: String(localized: "O favorito não pôde ser lido.")
+        case .unsupportedProtocol(let name): String(localized: "O protocolo \(name) ainda não está disponível nesta versão do Wormlink.")
+        case .authenticationFailed: String(localized: "Usuário ou senha incorretos.")
+        case .server(let status, let message): String(localized: "O servidor respondeu \(status): \(message)")
+        case .invalidResponse: String(localized: "Resposta inesperada do servidor.")
+        case .notFound(let path): String(localized: "“\(path)” não existe.")
+        case .hostKeyRejected: String(localized: "A chave do servidor não foi aceita.")
+        case .unsupportedOperation(let name): String(localized: "\(name) não é suportado por este protocolo.")
+        case .connectionClosed: String(localized: "O servidor encerrou a conexão.")
+        case .timedOut: String(localized: "O servidor demorou demais para responder.")
+        case .checksumMismatch(let name): String(localized: "A verificação de “\(name)” falhou: o arquivo no destino é diferente da origem.")
+        case .awsProfileNotFound(let name): String(localized: "O perfil “\(name)” não foi encontrado (ou não tem chaves) em ~/.aws/credentials ou ~/.aws/config.")
         case .commandFailed(let output): "O comando falhou: \(output)"
-        case .missingClientID(let name): "Falta o Client ID do \(name). Cadastre um app no provedor e cole o ID em Ajustes › Nuvens."
+        case .missingClientID(let name): String(localized: "Falta o Client ID do \(name). Cadastre um app no provedor e cole o ID em Ajustes › Nuvens.")
         }
     }
 }

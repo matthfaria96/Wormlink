@@ -8,7 +8,7 @@ final class PaneModel: Identifiable {
         case list, icons, columns, gallery
 
         var title: String {
-            switch self { case .list: "Lista"; case .icons: "Ícones"; case .columns: "Colunas"; case .gallery: "Galeria" }
+            switch self { case .list: String(localized: "Lista"); case .icons: String(localized: "Ícones"); case .columns: String(localized: "Colunas"); case .gallery: String(localized: "Galeria") }
         }
 
         var symbol: String {
@@ -58,7 +58,7 @@ final class PaneModel: Identifiable {
     }
 
     var isLocal: Bool { fs is LocalFileSystem }
-    var title: String { isLocal ? Host.current().localizedName ?? "Este Mac" : fs.title }
+    var title: String { isLocal ? Host.current().localizedName ?? String(localized: "Este Mac") : fs.title }
     var canGoBack: Bool { !back.isEmpty }
     var canGoForward: Bool { !forward.isEmpty }
 
@@ -231,7 +231,7 @@ final class PaneModel: Identifiable {
             let line = fs is SFTPFileSystem ? "cd \(SFTPFileSystem.shellQuote(path)) && \(command)" : command
             let output = try await fs.execute(line)
             await reload()
-            return output.isEmpty ? "(sem saída)" : output
+            return output.isEmpty ? String(localized: "(sem saída)") : output
         } catch {
             return error.localizedDescription
         }

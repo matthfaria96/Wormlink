@@ -132,7 +132,7 @@ public final class SMBFileSystem: FileSystem, @unchecked Sendable {
 
     /// Caminho remoto → caminho no disco montado.
     func localPath(_ path: String) async throws -> String {
-        guard let share = share(of: path) else { throw WormlinkError.unsupportedOperation("Isto na raiz do servidor") }
+        guard let share = share(of: path) else { throw WormlinkError.unsupportedOperation(String(localized: "Isto na raiz do servidor")) }
         let mount = try await mountpoint(for: share)
         let rest = RemotePath.normalize(path).split(separator: "/").dropFirst().joined(separator: "/")
         return rest.isEmpty ? mount.path : mount.appending(path: rest).path

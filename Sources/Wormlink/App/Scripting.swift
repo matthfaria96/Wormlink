@@ -7,11 +7,11 @@ import WormlinkCore
 /// Base: acha o servidor pelo nome e roda trabalho assíncrono com o script suspenso.
 nonisolated class WormlinkScriptCommand: NSScriptCommand {
     func bookmark(named name: String?) -> Bookmark? {
-        guard let name, !name.isEmpty else { fail("Falta o nome do servidor."); return nil }
+        guard let name, !name.isEmpty else { fail(String(localized: "Falta o nome do servidor.")); return nil }
         let all = BookmarkStore(fileURL: AppModel.currentStoreURL).load()
         guard let found = all.first(where: { $0.displayName.caseInsensitiveCompare(name) == .orderedSame })
                 ?? all.first(where: { $0.hostname.caseInsensitiveCompare(name) == .orderedSame }) else {
-            fail("Nenhum servidor salvo chamado “\(name)”.")
+            fail(String(localized: "Nenhum servidor salvo chamado “\(name)”."))
             return nil
         }
         return found
@@ -87,7 +87,7 @@ nonisolated final class WormlinkUploadCommand: WormlinkScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard let bookmark = bookmark(named: evaluatedArguments?["server"] as? String) else { return nil }
         let files: [URL] = (directParameter as? [URL]) ?? (directParameter as? URL).map { [$0] } ?? []
-        guard !files.isEmpty else { fail("Nenhum arquivo para enviar."); return nil }
+        guard !files.isEmpty else { fail(String(localized: "Nenhum arquivo para enviar.")); return nil }
         let path = evaluatedArguments?["path"] as? String
         return suspend {
             let fs = try await Self.connect(bookmark)
@@ -111,7 +111,7 @@ nonisolated final class WormlinkDownloadCommand: WormlinkScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard let bookmark = bookmark(named: evaluatedArguments?["server"] as? String) else { return nil }
         guard let remote = directParameter as? String, let destination = evaluatedArguments?["destination"] as? URL else {
-            fail("Diga o caminho remoto e a pasta local (to).")
+            fail(String(localized: "Diga o caminho remoto e a pasta local (to)."))
             return nil
         }
         return suspend {

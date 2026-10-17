@@ -34,7 +34,7 @@ enum Droplets {
         compile.waitUntilExit()
         guard compile.terminationStatus == 0 else {
             let message = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-            throw DropletError(message: message.isEmpty ? "osacompile falhou." : message)
+            throw DropletError(message: message.isEmpty ? String(localized: "osacompile falhou.") : message)
         }
         // Ícone do Wormlink no lugar do ícone padrão de script; depois reassina (ad hoc),
         // porque mexer no bundle invalida a assinatura que o osacompile fez.
@@ -69,14 +69,14 @@ enum Droplets {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "\(bookmark.displayName).app"
         panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
-        panel.message = "Arquivos soltos sobre o droplet serão enviados para “\(bookmark.displayName)”."
+        panel.message = String(localized: "Arquivos soltos sobre o droplet serão enviados para “\(bookmark.displayName)”.")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try create(for: bookmark, at: url)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
             let alert = NSAlert(error: error)
-            alert.messageText = "Não foi possível criar o droplet"
+            alert.messageText = String(localized: "Não foi possível criar o droplet")
             alert.runModal()
         }
     }

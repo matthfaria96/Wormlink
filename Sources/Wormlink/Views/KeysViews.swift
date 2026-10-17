@@ -61,7 +61,7 @@ struct KeysSettings: View {
 
     private func importKey() {
         let panel = NSOpenPanel()
-        panel.message = "Escolha uma chave privada (OpenSSH ou PEM) para copiar para ~/.ssh."
+        panel.message = String(localized: "Escolha uma chave privada (OpenSSH ou PEM) para copiar para ~/.ssh.")
         panel.showsHiddenFiles = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {

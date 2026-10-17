@@ -32,14 +32,14 @@ private struct S3ObjectPanel: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            section("Link temporário", AnyView(shareLink))
+            section(String(localized: "Link temporário"), AnyView(shareLink))
             if let info = Binding($info) {
                 section("Amazon S3", AnyView(properties(info)))
-                section("Metadados", AnyView(metadata(info)))
+                section(String(localized: "Metadados"), AnyView(metadata(info)))
             } else if error == nil {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity)
             }
-            if versions.count > 1 { section("Versões", AnyView(versionList)) }
+            if versions.count > 1 { section(String(localized: "Versões"), AnyView(versionList)) }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }
         .task { await load() }
@@ -85,7 +85,7 @@ private struct S3ObjectPanel: View {
     private func properties(_ info: Binding<S3ObjectInfo>) -> some View {
         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
             GridRow {
-                label("Classe")
+                label(String(localized: "Classe"))
                 Picker("", selection: info.storageClass) {
                     ForEach(S3StorageClass.all, id: \.id) { Text($0.title).tag($0.id) }
                     if !S3StorageClass.all.contains(where: { $0.id == info.wrappedValue.storageClass }) {
@@ -95,7 +95,7 @@ private struct S3ObjectPanel: View {
                 .labelsHidden()
             }
             GridRow {
-                label("Criptografia")
+                label(String(localized: "Criptografia"))
                 Picker("", selection: Binding(get: { info.wrappedValue.encryption ?? "" },
                                               set: { info.wrappedValue.encryption = $0.isEmpty ? nil : $0 })) {
                     ForEach(S3Encryption.all, id: \.id) { Text($0.title).tag($0.id) }
@@ -104,14 +104,14 @@ private struct S3ObjectPanel: View {
             }
             if info.wrappedValue.encryption == "aws:kms" {
                 GridRow {
-                    label("Chave KMS")
+                    label(String(localized: "Chave KMS"))
                     TextField("", text: Binding(get: { info.wrappedValue.kmsKeyID ?? "" }, set: { info.wrappedValue.kmsKeyID = $0 }),
                               prompt: Text("padrão da conta"))
                 }
             }
             if info.wrappedValue.acl != nil {
                 GridRow {
-                    label("Acesso")
+                    label(String(localized: "Acesso"))
                     Picker("", selection: Binding(get: { info.wrappedValue.acl ?? .private }, set: { info.wrappedValue.acl = $0 })) {
                         ForEach(S3CannedACL.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
@@ -119,12 +119,12 @@ private struct S3ObjectPanel: View {
                 }
             }
             GridRow {
-                label("Tipo")
+                label(String(localized: "Tipo"))
                 TextField("", text: Binding(get: { info.wrappedValue.contentType ?? "" }, set: { info.wrappedValue.contentType = $0 }),
                           prompt: Text("application/octet-stream"))
             }
             GridRow {
-                label("Cache")
+                label(String(localized: "Cache"))
                 TextField("", text: Binding(get: { info.wrappedValue.cacheControl ?? "" }, set: { info.wrappedValue.cacheControl = $0 }),
                           prompt: Text("max-age=86400"))
             }
@@ -193,7 +193,7 @@ private struct S3ObjectPanel: View {
                         .foregroundStyle(version.isLatest ? Color.wormlink : .secondary)
                     VStack(alignment: .leading) {
                         Text(version.modified?.formatted(date: .abbreviated, time: .shortened) ?? version.versionID).font(.callout)
-                        Text(version.isDeleteMarker ? "Apagado" : version.size.map { $0.formatted(.byteCount(style: .file)) } ?? "")
+                        Text(version.isDeleteMarker ? String(localized: "Apagado") : version.size.map { $0.formatted(.byteCount(style: .file)) } ?? "")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -240,7 +240,7 @@ private struct S3BucketPanel: View {
         VStack(spacing: 16) {
             if let options {
                 section("Bucket", AnyView(bucketToggles(options)))
-                section("Ciclo de vida", AnyView(lifecycleEditor))
+                section(String(localized: "Ciclo de vida"), AnyView(lifecycleEditor))
                 if fs.isAWS { section("CloudFront", AnyView(cloudFront)) }
             } else if error == nil {
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity)
@@ -278,14 +278,14 @@ private struct S3BucketPanel: View {
     @ViewBuilder
     private func bucketToggles(_ options: S3BucketOptions) -> some View {
         Toggle("Guardar versões dos arquivos", isOn: Binding(get: { options.versioning == "Enabled" }, set: { on in
-            run(on ? "Versionamento ligado" : "Versionamento suspenso") { try await fs.setVersioning(bucket, enabled: on) }
+            run(on ? String(localized: "Versionamento ligado") : String(localized: "Versionamento suspenso")) { try await fs.setVersioning(bucket, enabled: on) }
         }))
         Toggle("Quem baixa paga (Requester Pays)", isOn: Binding(get: { options.requesterPays }, set: { on in
-            run("Pagamento atualizado") { try await fs.setRequesterPays(bucket, enabled: on) }
+            run(String(localized: "Pagamento atualizado")) { try await fs.setRequesterPays(bucket, enabled: on) }
         }))
         if fs.isAWS {
             Toggle("Transfer Acceleration", isOn: Binding(get: { options.acceleration == "Enabled" }, set: { on in
-                run("Aceleração atualizada") { try await fs.setAcceleration(bucket, enabled: on) }
+                run(String(localized: "Aceleração atualizada")) { try await fs.setAcceleration(bucket, enabled: on) }
             }))
             Text("Com a aceleração ligada no bucket, ative-a também no editor do servidor para usar o endereço acelerado.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -348,11 +348,11 @@ private struct S3BucketPanel: View {
                         TextField("", text: $invalidation, prompt: Text("/caminho/*")).textFieldStyle(.roundedBorder)
                         Button("Invalidar") {
                             let paths = invalidation.split(separator: " ").map(String.init)
-                            run("Invalidação enviada") { try await fs.invalidate(distribution.id, paths: paths) }
+                            run(String(localized: "Invalidação enviada")) { try await fs.invalidate(distribution.id, paths: paths) }
                         }
                     }
                     Button(distribution.enabled ? "Desativar" : "Ativar") {
-                        run(distribution.enabled ? "Distribuição desativada" : "Distribuição ativada") {
+                        run(distribution.enabled ? String(localized: "Distribuição desativada") : String(localized: "Distribuição ativada")) {
                             try await fs.setDistribution(distribution.id, enabled: !distribution.enabled)
                         }
                     }

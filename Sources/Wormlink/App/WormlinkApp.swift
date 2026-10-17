@@ -173,7 +173,7 @@ enum About {
         NSApp.orderFrontStandardAboutPanel(options: [
             .credits: text,
             .applicationName: "Wormlink",
-            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "Conecte. Explore. Transfira.",
+            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): String(localized: "Conecte. Explore. Transfira."),
         ])
         NSApp.activate()
     }
@@ -192,10 +192,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let active = ActiveTransfers.count
         guard active > 0 else { return .terminateNow }
         let alert = NSAlert()
-        alert.messageText = active == 1 ? "Há uma transferência em andamento" : "Há \(active) transferências em andamento"
-        alert.informativeText = "Se sair agora, elas serão interrompidas. Arquivos parciais podem ser retomados depois."
-        alert.addButton(withTitle: "Continuar no Wormlink")
-        alert.addButton(withTitle: "Sair Mesmo Assim")
+        alert.messageText = active == 1 ? String(localized: "Há uma transferência em andamento") : String(localized: "Há \(active) transferências em andamento")
+        alert.informativeText = String(localized: "Se sair agora, elas serão interrompidas. Arquivos parciais podem ser retomados depois.")
+        alert.addButton(withTitle: String(localized: "Continuar no Wormlink"))
+        alert.addButton(withTitle: String(localized: "Sair Mesmo Assim"))
         return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
     }
 }

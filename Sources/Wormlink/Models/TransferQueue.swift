@@ -150,7 +150,7 @@ final class TransferQueue {
                                              Task { @MainActor in transfer.detail = change.relativePath }
                                          })
             completion()
-            if let first = failures.first { throw SyncFailure(message: "\(failures.count) erro(s). \(first)") }
+            if let first = failures.first { throw SyncFailure(message: String(localized: "\(failures.count) erro(s). \(first)")) }
         })
     }
 
@@ -242,7 +242,7 @@ enum ConflictPrompter {
     @MainActor
     private static func ask(_ source: FileItem, _ existing: FileItem) -> (ConflictAction, Bool) {
         let alert = NSAlert()
-        alert.messageText = "“\(source.name)” já existe no destino"
+        alert.messageText = String(localized: "“\(source.name)” já existe no destino")
         let mine = source.size.map { $0.formatted(.byteCount(style: .file)) } ?? "—"
         let theirs = existing.size.map { $0.formatted(.byteCount(style: .file)) } ?? "—"
         alert.informativeText = "Origem: \(mine), \(source.modified?.shortStamp ?? "—")\nDestino: \(theirs), \(existing.modified?.shortStamp ?? "—")"
@@ -252,7 +252,7 @@ enum ConflictPrompter {
         actions += [.rename, .skip]
         for action in actions { alert.addButton(withTitle: action.title) }
         alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "Aplicar a todos nesta transferência"
+        alert.suppressionButton?.title = String(localized: "Aplicar a todos nesta transferência")
         let response = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         let action = actions.indices.contains(response) ? actions[response] : .skip
         return (action, alert.suppressionButton?.state == .on)

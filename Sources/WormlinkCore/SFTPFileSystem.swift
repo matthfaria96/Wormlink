@@ -301,13 +301,13 @@ extension SFTPMessage.Status: @retroactive LocalizedError {
     public var errorDescription: String? {
         let detail = message.trimmingCharacters(in: .whitespacesAndNewlines)
         let text: String = switch errorCode {
-        case .noSuchFile: "Arquivo ou pasta não encontrado no servidor."
-        case .permissionDenied: "Permissão negada pelo servidor."
-        case .eof: "Fim do arquivo."
-        case .noConnection, .connectionLost: "A conexão com o servidor caiu."
-        case .unsupportedOperation: "O servidor não permite esta operação."
-        case .badMessage: "O servidor não entendeu o pedido."
-        default: "O servidor recusou a operação."
+        case .noSuchFile: String(localized: "Arquivo ou pasta não encontrado no servidor.")
+        case .permissionDenied: String(localized: "Permissão negada pelo servidor.")
+        case .eof: String(localized: "Fim do arquivo.")
+        case .noConnection, .connectionLost: String(localized: "A conexão com o servidor caiu.")
+        case .unsupportedOperation: String(localized: "O servidor não permite esta operação.")
+        case .badMessage: String(localized: "O servidor não entendeu o pedido.")
+        default: String(localized: "O servidor recusou a operação.")
         }
         return detail.isEmpty || detail.lowercased() == "failure" ? text : "\(text) (\(detail))"
     }

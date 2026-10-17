@@ -54,12 +54,12 @@ struct ServersPane: View {
     private var header: some View {
         ZStack {
             HStack(spacing: 0) {
-                UnderlineTab(title: "Servidores", symbol: "globe", selected: slot.serversTab == .servers && slot.editing == nil) {
+                UnderlineTab(title: String(localized: "Servidores"), symbol: "globe", selected: slot.serversTab == .servers && slot.editing == nil) {
                     slot.editing = nil
                     slot.passwordRequest = nil
                     slot.serversTab = .servers
                 }
-                UnderlineTab(title: "Quick Connect", symbol: "bolt.fill", selected: slot.serversTab == .quickConnect && slot.editing == nil) {
+                UnderlineTab(title: String(localized: "Quick Connect"), symbol: "bolt.fill", selected: slot.serversTab == .quickConnect && slot.editing == nil) {
                     slot.editing = nil
                     slot.passwordRequest = nil
                     slot.serversTab = .quickConnect
@@ -68,7 +68,7 @@ struct ServersPane: View {
             HStack {
                 LocationMenu(window: window, slot: slot)
                 Spacer()
-                BarButton(title: slot.serversAsGrid ? "Ver como lista" : "Ver como grade",
+                BarButton(title: slot.serversAsGrid ? String(localized: "Ver como lista") : String(localized: "Ver como grade"),
                           symbol: slot.serversAsGrid ? "list.bullet" : "square.grid.2x2") { slot.serversAsGrid.toggle() }
             }
             .padding(.horizontal, 10)
@@ -110,7 +110,7 @@ struct ServersPane: View {
                     Divider().padding(.horizontal, 24).padding(.vertical, 8)
                     ForEach(app.groups, id: \.self) { group in
                         let count = app.bookmarks.filter { $0.group == group }.count
-                        groupRow(group, symbol: "folder.fill", detail: count == 1 ? "1 servidor" : "\(count) servidores") {
+                        groupRow(group, symbol: "folder.fill", detail: count == 1 ? String(localized: "1 servidor") : String(localized: "\(count) servidores")) {
                             slot.serversPage = .group(group)
                         }
                         .dropDestination(for: String.self) { ids, _ in
@@ -122,21 +122,21 @@ struct ServersPane: View {
                             Button("Apagar Grupo", role: .destructive) { app.removeGroup(group) }
                         }
                     }
-                    groupRow("Histórico", symbol: "clock.arrow.circlepath",
-                             detail: app.history.first.map { $0.date.formatted(.relative(presentation: .named)) } ?? "Vazio") {
+                    groupRow(String(localized: "Histórico"), symbol: "clock.arrow.circlepath",
+                             detail: app.history.first.map { $0.date.formatted(.relative(presentation: .named)) } ?? String(localized: "Vazio")) {
                         slot.serversPage = .history
                     }
                     if app.showBonjour {
                         let count = app.bonjour.servers.count
                         groupRow("Bonjour", symbol: "bonjour",
-                                 detail: count == 0 ? "Procurando…" : count == 1 ? "1 servidor" : "\(count) servidores") {
+                                 detail: count == 0 ? String(localized: "Procurando…") : count == 1 ? String(localized: "1 servidor") : String(localized: "\(count) servidores")) {
                             slot.serversPage = .bonjour
                         }
                     }
                     let candidates = app.cyberduckCandidates.count
                     if candidates > 0 {
-                        groupRow("Do Cyberduck", symbol: "tray.and.arrow.down",
-                                 detail: candidates == 1 ? "1 servidor" : "\(candidates) servidores") {
+                        groupRow(String(localized: "Do Cyberduck"), symbol: "tray.and.arrow.down",
+                                 detail: candidates == 1 ? String(localized: "1 servidor") : String(localized: "\(candidates) servidores")) {
                             slot.serversPage = .cyberduck
                         }
                     }
@@ -170,9 +170,9 @@ struct ServersPane: View {
 
     private var pageTitle: String {
         switch slot.serversPage {
-        case .all: "Servidores"
-        case .history: "Histórico"
-        case .cyberduck: "Do Cyberduck"
+        case .all: String(localized: "Servidores")
+        case .history: String(localized: "Histórico")
+        case .cyberduck: String(localized: "Do Cyberduck")
         case .bonjour: "Bonjour"
         case .group(let name): name
         }
@@ -254,13 +254,13 @@ struct ServersPane: View {
     }
 
     private var emptyText: String {
-        if !window.search.isEmpty { return "Nenhum servidor encontrado." }
+        if !window.search.isEmpty { return String(localized: "Nenhum servidor encontrado.") }
         switch slot.serversPage {
-        case .all: return "Nenhum servidor ainda.\nAdicione um ou use o Quick Connect."
-        case .history: return "Nenhuma conexão recente."
-        case .cyberduck: return "Nenhum favorito novo do Cyberduck neste Mac."
-        case .bonjour: return "Nenhum servidor anunciado na rede local.\nSFTP, FTP, WebDAV e SMB aparecem aqui sozinhos."
-        case .group: return "Grupo vazio. Arraste servidores para cá\nou crie um com o botão +."
+        case .all: return String(localized: "Nenhum servidor ainda.\nAdicione um ou use o Quick Connect.")
+        case .history: return String(localized: "Nenhuma conexão recente.")
+        case .cyberduck: return String(localized: "Nenhum favorito novo do Cyberduck neste Mac.")
+        case .bonjour: return String(localized: "Nenhum servidor anunciado na rede local.\nSFTP, FTP, WebDAV e SMB aparecem aqui sozinhos.")
+        case .group: return String(localized: "Grupo vazio. Arraste servidores para cá\nou crie um com o botão +.")
         }
     }
 
@@ -284,7 +284,7 @@ struct ServersPane: View {
             Button("Duplicar") {
                 var copy = bookmark
                 copy.id = UUID()
-                copy.nickname = bookmark.displayName + " (cópia)"
+                copy.nickname = bookmark.displayName + String(localized: " (cópia)")
                 app.save(copy)
             }
         } else {
@@ -315,9 +315,9 @@ struct ServersPane: View {
 
     private var bottomBar: some View {
         HStack(spacing: 4) {
-            BarButton(title: "Novo servidor", symbol: "plus", action: newServer)
-            BarButton(title: "Novo grupo", symbol: "folder.badge.plus") { groupName = ""; creatingGroup = true }
-            BarButton(title: "Editar servidor", symbol: "pencil") {
+            BarButton(title: String(localized: "Novo servidor"), symbol: "plus", action: newServer)
+            BarButton(title: String(localized: "Novo grupo"), symbol: "folder.badge.plus") { groupName = ""; creatingGroup = true }
+            BarButton(title: String(localized: "Editar servidor"), symbol: "pencil") {
                 if let id = slot.selectedServer, let bookmark = app.bookmark(id: id) { edit(bookmark) }
             }
             .disabled(slot.selectedServer.flatMap(app.bookmark(id:)) == nil)

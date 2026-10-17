@@ -91,7 +91,7 @@ final class WindowModel {
         for slot in [right, left] where !slot.showingServers {
             if let files = slot.files, !files.isLocal { return files.title }
         }
-        return "Servidores"
+        return String(localized: "Servidores")
     }
 
     // MARK: Conexão
@@ -211,8 +211,8 @@ enum TrustPrompter {
     @MainActor
     static func askInteractive(_ c: InteractiveChallenge) -> [String]? {
         let alert = NSAlert()
-        alert.messageText = c.name.isEmpty ? "“\(c.host)” pede mais informações" : c.name
-        alert.informativeText = c.instruction.isEmpty ? "Usuário: \(c.user)" : c.instruction
+        alert.messageText = c.name.isEmpty ? String(localized: "“\(c.host)” pede mais informações") : c.name
+        alert.informativeText = c.instruction.isEmpty ? String(localized: "Usuário: \(c.user)") : c.instruction
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -228,8 +228,8 @@ enum TrustPrompter {
         }
         stack.frame = NSRect(x: 0, y: 0, width: 260, height: CGFloat(c.prompts.count) * 48)
         alert.accessoryView = stack
-        alert.addButton(withTitle: "Continuar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: String(localized: "Continuar"))
+        alert.addButton(withTitle: String(localized: "Cancelar"))
         alert.window.initialFirstResponder = fields.first
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }
         return fields.map(\.stringValue)
@@ -242,14 +242,14 @@ enum TrustPrompter {
     static func askPassphrase(_ request: PassphraseRequest) -> (passphrase: String, remember: Bool)? {
         guard !declinedKeys.contains(request.keyPath) else { return nil }
         let alert = NSAlert()
-        alert.messageText = request.retry ? "Frase secreta incorreta" : "A chave SSH está protegida"
-        alert.informativeText = "Digite a frase secreta de “\((request.keyPath as NSString).abbreviatingWithTildeInPath)”."
+        alert.messageText = request.retry ? String(localized: "Frase secreta incorreta") : String(localized: "A chave SSH está protegida")
+        alert.informativeText = String(localized: "Digite a frase secreta de “\((request.keyPath as NSString).abbreviatingWithTildeInPath)”.")
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
         alert.accessoryView = field
-        alert.addButton(withTitle: "Usar Chave")
-        alert.addButton(withTitle: "Pular Esta Chave")
+        alert.addButton(withTitle: String(localized: "Usar Chave"))
+        alert.addButton(withTitle: String(localized: "Pular Esta Chave"))
         alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "Lembrar no Chaves"
+        alert.suppressionButton?.title = String(localized: "Lembrar no Chaves")
         alert.suppressionButton?.state = .on
         alert.window.initialFirstResponder = field
         guard alert.runModal() == .alertFirstButtonReturn else {
@@ -263,13 +263,13 @@ enum TrustPrompter {
     static func askHostKey(_ c: HostKeyChallenge) -> Bool {
         let alert = NSAlert()
         alert.alertStyle = c.changed ? .critical : .warning
-        alert.messageText = c.changed ? "A chave do servidor “\(c.host)” mudou" : "Servidor desconhecido: “\(c.host)”"
+        alert.messageText = c.changed ? String(localized: "A chave do servidor “\(c.host)” mudou") : String(localized: "Servidor desconhecido: “\(c.host)”")
         alert.informativeText = (c.changed
-            ? "Isso pode indicar que alguém está interceptando a conexão, ou que o servidor foi reinstalado. "
-            : "É a primeira conexão com este servidor. ")
-            + "Confira a impressão digital com o administrador antes de continuar.\n\n\(c.keyType)\n\(c.fingerprint)"
-        alert.addButton(withTitle: c.changed ? "Cancelar" : "Confiar e Conectar")
-        alert.addButton(withTitle: c.changed ? "Confiar na Nova Chave" : "Cancelar")
+            ? String(localized: "Isso pode indicar que alguém está interceptando a conexão, ou que o servidor foi reinstalado. ")
+            : String(localized: "É a primeira conexão com este servidor. "))
+            + String(localized: "Confira a impressão digital com o administrador antes de continuar.\n\n\(c.keyType)\n\(c.fingerprint)")
+        alert.addButton(withTitle: c.changed ? String(localized: "Cancelar") : String(localized: "Confiar e Conectar"))
+        alert.addButton(withTitle: c.changed ? String(localized: "Confiar na Nova Chave") : String(localized: "Cancelar"))
         let response = alert.runModal()
         return c.changed ? response == .alertSecondButtonReturn : response == .alertFirstButtonReturn
     }
@@ -278,10 +278,10 @@ enum TrustPrompter {
     static func askCertificate(_ c: CertificateChallenge) -> Bool {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "O certificado de “\(c.host)” não é confiável"
+        alert.messageText = String(localized: "O certificado de “\(c.host)” não é confiável")
         alert.informativeText = "\(c.reason)\n\nCertificado: \(c.summary)\nSHA-256: \(c.fingerprint)"
-        alert.addButton(withTitle: "Cancelar")
-        alert.addButton(withTitle: "Confiar Sempre")
+        alert.addButton(withTitle: String(localized: "Cancelar"))
+        alert.addButton(withTitle: String(localized: "Confiar Sempre"))
         return alert.runModal() == .alertSecondButtonReturn
     }
 }

@@ -60,7 +60,7 @@ final class TextDocument: Identifiable {
 
     func reinterpret(as newEncoding: String.Encoding) {
         guard let data = try? Data(contentsOf: local), let string = String(data: data, encoding: newEncoding) else {
-            error = "O arquivo não pode ser lido nessa codificação."
+            error = String(localized: "O arquivo não pode ser lido nessa codificação.")
             return
         }
         encoding = newEncoding
@@ -70,7 +70,8 @@ final class TextDocument: Identifiable {
 
     func save() async {
         guard let data = text.data(using: encoding) else {
-            error = "O texto tem caracteres que não existem em \(Self.encodings.first { $0.0 == encoding }?.1 ?? "nesta codificação"). Use UTF-8."
+            let name = Self.encodings.first { $0.0 == encoding }?.1 ?? String(localized: "nesta codificação")
+            error = String(localized: "O texto tem caracteres que não existem em \(name). Use UTF-8.")
             return
         }
         isSaving = true

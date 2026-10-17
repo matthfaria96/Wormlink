@@ -107,9 +107,9 @@ actor AWSCredentials {
             var code: String?
             if let mfaSerial, !mfaSerial.isEmpty {
                 let answer = await trust.interactive(InteractiveChallenge(
-                    host: "AWS", user: mfaSerial, name: "Código MFA da AWS",
-                    instruction: "Digite o código do dispositivo MFA \(mfaSerial) para assumir o papel \(role).",
-                    prompts: [.init(text: "Código MFA:", echo: true)]))
+                    host: "AWS", user: mfaSerial, name: String(localized: "Código MFA da AWS"),
+                    instruction: String(localized: "Digite o código do dispositivo MFA \(mfaSerial) para assumir o papel \(role)."),
+                    prompts: [.init(text: String(localized: "Código MFA:"), echo: true)]))
                 guard let first = answer?.first, !first.isEmpty else { throw WormlinkError.authenticationFailed }
                 code = first
             }

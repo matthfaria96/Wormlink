@@ -120,7 +120,7 @@ public final class GoogleDriveFileSystem: FileSystem {
         do {
             try await session.download(URLRequest(url: c.url!), to: local, offset: offset, progress: progress)
         } catch WormlinkError.server(let status, _) where status == 403 {
-            throw WormlinkError.unsupportedOperation("Baixar documentos do Google (Docs, Planilhas, Apresentações)")
+            throw WormlinkError.unsupportedOperation(String(localized: "Baixar documentos do Google (Docs, Planilhas, Apresentações)"))
         }
     }
 

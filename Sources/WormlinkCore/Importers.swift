@@ -12,7 +12,7 @@ public enum ServerImporter: String, CaseIterable, Identifiable, Sendable {
         case .cyberduck: "Cyberduck"
         case .transmit: "Transmit"
         case .filezilla: "FileZilla"
-        case .winscp: "WinSCP (arquivo .ini)"
+        case .winscp: String(localized: "WinSCP (arquivo .ini)")
         }
     }
 

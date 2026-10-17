@@ -101,7 +101,7 @@ public enum OAuthFlow {
         let receiver = try LoopbackReceiver(port: OAuthProvider.redirectPort)
         await open(c.url!)
         let params = try await receiver.waitForCallback(timeout: 300)
-        guard params["state"] == state else { throw WormlinkError.server(status: 400, message: "Resposta de login inválida (state).") }
+        guard params["state"] == state else { throw WormlinkError.server(status: 400, message: String(localized: "Resposta de login inválida (state).")) }
         guard let code = params["code"] else {
             throw WormlinkError.server(status: 401, message: params["error_description"] ?? params["error"] ?? "Login cancelado.")
         }
@@ -195,7 +195,7 @@ final class LoopbackReceiver: @unchecked Sendable {
             let body = """
             <html><head><meta charset="utf-8"><title>Wormlink</title></head>
             <body style="font-family:-apple-system;text-align:center;padding:60px">
-            <h2>\(ok ? "Pronto! Pode voltar ao Wormlink." : "O login não foi concluído.")</h2></body></html>
+            <h2>\(ok ? String(localized: "Pronto! Pode voltar ao Wormlink.") : String(localized: "O login não foi concluído."))</h2></body></html>
             """
             let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
             connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })

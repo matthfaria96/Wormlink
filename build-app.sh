@@ -44,6 +44,9 @@ fi
 # Dicionário AppleScript.
 cp Resources/Wormlink.sdef "$CONTENTS/Resources/Wormlink.sdef"
 
+# Traduções (o português é a língua de origem; en.lproj traduz a partir dele).
+for lproj in Resources/*.lproj; do cp -R "$lproj" "$CONTENTS/Resources/"; done
+
 # Ícone do Icon Composer: Assets.car (camadas com Liquid Glass, modos escuro/tingido/transparente)
 # mais AppIcon.icns de reserva para sistemas e ferramentas que não leem o .car.
 # Caminhos absolutos: o actool roda como serviço compartilhado e resolve relativos no diretório dele.

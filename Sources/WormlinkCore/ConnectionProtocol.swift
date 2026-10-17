@@ -26,7 +26,7 @@ public enum ConnectionProtocol: String, Codable, CaseIterable, Identifiable, Sen
         case .sftp: "SFTP (SSH)"
         case .smb: "SMB (Windows, NAS)"
         case .ftp: "FTP"
-        case .ftps: "FTP com TLS/SSL"
+        case .ftps: String(localized: "FTP com TLS/SSL")
         case .webdav: "WebDAV (HTTP)"
         case .webdavs: "WebDAV (HTTPS)"
         case .s3: "Amazon S3"

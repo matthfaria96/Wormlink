@@ -10,9 +10,9 @@ public struct SyncOptions: Codable, Hashable, Sendable {
 
         public var title: String {
             switch self {
-            case .sizeOrDate: "Tamanho e data"
-            case .sizeOnly: "Só tamanho"
-            case .dateOnly: "Só data"
+            case .sizeOrDate: String(localized: "Tamanho e data")
+            case .sizeOnly: String(localized: "Só tamanho")
+            case .dateOnly: String(localized: "Só data")
             }
         }
     }

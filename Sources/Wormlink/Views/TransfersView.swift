@@ -91,23 +91,23 @@ private struct TransferRow: View {
         let done = transfer.done.formatted(.byteCount(style: .file))
         let total = transfer.total.formatted(.byteCount(style: .file))
         switch transfer.state {
-        case .waiting: return "Aguardando…"
-        case .preparing: return "Preparando…"
+        case .waiting: return String(localized: "Aguardando…")
+        case .preparing: return String(localized: "Preparando…")
         case .running:
-            var text = "\(done) de \(total)"
+            var text = String(localized: "\(done) de \(total)")
             if transfer.speed > 0 {
                 text += " — \(Int64(transfer.speed).formatted(.byteCount(style: .file)))/s"
                 let remaining = Double(transfer.total - transfer.done) / transfer.speed
                 if remaining.isFinite, remaining > 1 {
-                    text += ", cerca de \(Duration.seconds(remaining).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2))) restantes"
+                    text += String(localized: ", cerca de \(Duration.seconds(remaining).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2))) restantes")
                 }
             }
             if let detail = transfer.detail { text += "\n\(detail)" }
             return text
-        case .finished: return "Concluída — \(total) em \(transfer.destination)"
+        case .finished: return String(localized: "Concluída — \(total) em \(transfer.destination)")
         case .failed(let message): return "Falhou: \(message)"
-        case .cancelled: return "Cancelada"
-        case .paused: return "Pausada — \(done) de \(total)"
+        case .cancelled: return String(localized: "Cancelada")
+        case .paused: return String(localized: "Pausada — \(done) de \(total)")
         }
     }
 }

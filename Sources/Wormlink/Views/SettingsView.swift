@@ -180,7 +180,7 @@ private struct ServersSettings: View {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = [.init(filenameExtension: "cyberduckprofile") ?? .data]
-        panel.prompt = "Importar"
+        panel.prompt = String(localized: "Importar")
         guard panel.runModal() == .OK else { return }
         importError = nil
         for url in panel.urls {

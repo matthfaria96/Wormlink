@@ -154,39 +154,39 @@ struct QuickConnectView: View {
 
 /// Rótulos e campos visíveis de cada protocolo (e do perfil de serviço escolhido).
 struct FieldSpec {
-    var hostLabel = "Endereço", hostPrompt = "servidor.com", showHost = true, showPort = true
-    var userLabel = "Usuário", userPrompt = "usuário", showCredentials = true
-    var passwordLabel = "Senha", passwordPrompt = "senha"
-    var pathLabel = "Caminho remoto", pathPrompt = "/www/projeto"
+    var hostLabel = String(localized: "Endereço"), hostPrompt = String(localized: "servidor.com"), showHost = true, showPort = true
+    var userLabel = String(localized: "Usuário"), userPrompt = String(localized: "usuário"), showCredentials = true
+    var passwordLabel = String(localized: "Senha"), passwordPrompt = String(localized: "senha")
+    var pathLabel = String(localized: "Caminho remoto"), pathPrompt = "/www/projeto"
     var note: String?
 
     init(_ bookmark: Bookmark) {
         switch bookmark.connectionProtocol {
         case .s3:
             hostLabel = "Endpoint"; hostPrompt = "s3.amazonaws.com"
-            userLabel = "Access Key ID"; userPrompt = "AKIA… (ou use um perfil AWS)"
-            passwordLabel = "Secret Key"; passwordPrompt = "secret access key"
-            pathLabel = "Bucket/pasta"; pathPrompt = "/meu-bucket"
+            userLabel = "Access Key ID"; userPrompt = String(localized: "AKIA… (ou use um perfil AWS)")
+            passwordLabel = "Secret Key"; passwordPrompt = String(localized: "secret access key")
+            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = "/meu-bucket"
         case .b2:
             showHost = false; showPort = false
-            userLabel = "Key ID"; userPrompt = "keyID da Application Key"
+            userLabel = "Key ID"; userPrompt = String(localized: "keyID da Application Key")
             passwordLabel = "Application Key"; passwordPrompt = "applicationKey"
-            pathLabel = "Bucket/pasta"; pathPrompt = "/meu-bucket"
+            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = "/meu-bucket"
         case .azure:
             hostPrompt = "<conta>.blob.core.windows.net (opcional)"; showPort = false
-            userLabel = "Conta"; userPrompt = "nome da conta de armazenamento"
-            passwordLabel = "Chave ou SAS"; passwordPrompt = "chave de acesso ou token SAS"
-            pathLabel = "Contêiner/pasta"; pathPrompt = "/meu-conteiner"
+            userLabel = String(localized: "Conta"); userPrompt = String(localized: "nome da conta de armazenamento")
+            passwordLabel = String(localized: "Chave ou SAS"); passwordPrompt = String(localized: "chave de acesso ou token SAS")
+            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = "/meu-conteiner"
         case .swift:
-            hostLabel = "Autenticação"; hostPrompt = "identity.servidor.com"
-            userPrompt = "projeto:usuário"; passwordPrompt = "senha ou API key"
-            pathLabel = "Contêiner/pasta"; pathPrompt = "/meu-conteiner"
+            hostLabel = String(localized: "Autenticação"); hostPrompt = "identity.servidor.com"
+            userPrompt = "projeto:usuário"; passwordPrompt = String(localized: "senha ou API key")
+            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = "/meu-conteiner"
         case .smb:
-            userPrompt = "usuário (vazio = convidado)"
-            pathLabel = "Compartilhamento"; pathPrompt = "/Documentos"
+            userPrompt = String(localized: "usuário (vazio = convidado)")
+            pathLabel = String(localized: "Compartilhamento"); pathPrompt = "/Documentos"
         case .sharePoint:
             hostLabel = "Site"; hostPrompt = "empresa.sharepoint.com"; showPort = false; showCredentials = false
-            pathLabel = "Caminho do site"; pathPrompt = "/sites/Equipe"
+            pathLabel = String(localized: "Caminho do site"); pathPrompt = "/sites/Equipe"
         case .dropbox, .box, .googleDrive, .oneDrive:
             showHost = false; showPort = false; showCredentials = false
         default: break
@@ -214,7 +214,7 @@ struct ConnectionFields: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 9) {
             GridRow {
-                label("Protocolo")
+                label(String(localized: "Protocolo"))
                 HStack {
                     Picker("", selection: kindBinding) {
                         Section("Protocolos") {
@@ -253,8 +253,8 @@ struct ConnectionFields: View {
             if proto.isOAuth {
                 line
                 GridRow {
-                    label("Conta")
-                    Text(bookmark.username.isEmpty ? "Ao conectar, o navegador abre para você entrar." : bookmark.username)
+                    label(String(localized: "Conta"))
+                    Text(bookmark.username.isEmpty ? String(localized: "Ao conectar, o navegador abre para você entrar.") : bookmark.username)
                         .foregroundStyle(bookmark.username.isEmpty ? .secondary : .primary)
                 }
                 if proto.oauthProvider?.clientID.isEmpty == true {
@@ -286,7 +286,7 @@ struct ConnectionFields: View {
             if proto == .swift {
                 line
                 GridRow {
-                    label("Versão")
+                    label(String(localized: "Versão"))
                     HStack {
                         Picker("", selection: Binding(get: { bookmark.swiftAuthPath ?? "/v3" }, set: { bookmark.swiftAuthPath = $0 })) {
                             Text("Keystone 3").tag("/v3")
@@ -315,16 +315,16 @@ struct ConnectionFields: View {
             if proto == .sftp {
                 line
                 GridRow {
-                    label("Chave SSH")
+                    label(String(localized: "Chave SSH"))
                     HStack {
                         Text(bookmark.keyFile.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "~/.ssh, ~/.ssh/config e agente (automático)")
                             .foregroundStyle(bookmark.keyFile == nil ? .tertiary : .primary)
                             .lineLimit(1).truncationMode(.middle)
                         Spacer()
                         if bookmark.keyFile != nil {
-                            BarButton(title: "Limpar chave", symbol: "xmark.circle.fill") { bookmark.keyFile = nil }
+                            BarButton(title: String(localized: "Limpar chave"), symbol: "xmark.circle.fill") { bookmark.keyFile = nil }
                         }
-                        BarButton(title: "Escolher chave", symbol: "key") { chooseKey() }
+                        BarButton(title: String(localized: "Escolher chave"), symbol: "key") { chooseKey() }
                     }
                 }
             }
@@ -344,12 +344,12 @@ struct ConnectionFields: View {
             if showPaths {
                 line
                 GridRow {
-                    label("Caminho local")
+                    label(String(localized: "Caminho local"))
                     HStack {
                         field("~/Sites/projeto", text: Binding(
                             get: { bookmark.localPath.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "" },
                             set: { bookmark.localPath = $0.isEmpty ? nil : ($0 as NSString).expandingTildeInPath }))
-                        BarButton(title: "Escolher pasta", symbol: "folder.badge.gearshape") { chooseLocalFolder() }
+                        BarButton(title: String(localized: "Escolher pasta"), symbol: "folder.badge.gearshape") { chooseLocalFolder() }
                     }
                 }
                 line
@@ -369,7 +369,7 @@ struct ConnectionFields: View {
                 Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 7) {
                     if !proto.isOAuth {
                         GridRow {
-                            label("Tempo limite")
+                            label(String(localized: "Tempo limite"))
                             HStack(spacing: 6) {
                                 TextField("", value: Binding(get: { bookmark.timeout ?? 20 },
                                                              set: { bookmark.timeout = $0 == 20 ? nil : max(5, min($0, 600)) }),
@@ -381,7 +381,7 @@ struct ConnectionFields: View {
                     }
                     if isFTP {
                         GridRow {
-                            label("Codificação")
+                            label(String(localized: "Codificação"))
                             Picker("", selection: Binding(get: { bookmark.encoding ?? "" },
                                                           set: { bookmark.encoding = $0.isEmpty ? nil : $0 })) {
                                 ForEach(Self.encodings, id: \.id) { Text($0.title).tag($0.id) }
@@ -402,7 +402,7 @@ struct ConnectionFields: View {
                     }
                     if proto == .s3 {
                         GridRow {
-                            label("Classe padrão")
+                            label(String(localized: "Classe padrão"))
                             Picker("", selection: optionalBinding(\.s3StorageClass)) {
                                 Text("Do bucket").tag("")
                                 ForEach(S3StorageClass.all, id: \.id) { Text($0.title).tag($0.id) }
@@ -410,14 +410,14 @@ struct ConnectionFields: View {
                             .labelsHidden().fixedSize()
                         }
                         GridRow {
-                            label("Criptografia")
+                            label(String(localized: "Criptografia"))
                             Picker("", selection: optionalBinding(\.s3Encryption)) {
                                 ForEach(S3Encryption.all, id: \.id) { Text($0.title).tag($0.id) }
                             }
                             .labelsHidden().fixedSize()
                         }
                         GridRow {
-                            label("Acesso")
+                            label(String(localized: "Acesso"))
                             Picker("", selection: optionalBinding(\.s3ACL)) {
                                 Text("Do bucket").tag("")
                                 ForEach(S3CannedACL.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
@@ -436,7 +436,7 @@ struct ConnectionFields: View {
                         }
                     }
                     GridRow {
-                        label("Notas")
+                        label(String(localized: "Notas"))
                         TextField("", text: optionalBinding(\.comment), prompt: Text("opcional"), axis: .vertical)
                             .textFieldStyle(.plain).lineLimit(1...4)
                     }
@@ -448,11 +448,11 @@ struct ConnectionFields: View {
     }
 
     static let encodings: [(id: String, title: String)] = [
-        ("", "Unicode (UTF-8)"), ("iso-8859-1", "Ocidental (ISO Latin 1)"), ("windows-1252", "Ocidental (Windows)"),
-        ("macintosh", "Ocidental (Mac OS Roman)"), ("iso-8859-2", "Europa Central (ISO Latin 2)"),
-        ("windows-1251", "Cirílico (Windows)"), ("koi8-r", "Cirílico (KOI8-R)"), ("shift_jis", "Japonês (Shift JIS)"),
-        ("euc-jp", "Japonês (EUC)"), ("gb18030", "Chinês Simplificado (GB 18030)"), ("big5", "Chinês Tradicional (Big 5)"),
-        ("euc-kr", "Coreano (EUC)"),
+        ("", "Unicode (UTF-8)"), ("iso-8859-1", String(localized: "Ocidental (ISO Latin 1)")), ("windows-1252", String(localized: "Ocidental (Windows)")),
+        ("macintosh", String(localized: "Ocidental (Mac OS Roman)")), ("iso-8859-2", String(localized: "Europa Central (ISO Latin 2)")),
+        ("windows-1251", String(localized: "Cirílico (Windows)")), ("koi8-r", String(localized: "Cirílico (KOI8-R)")), ("shift_jis", String(localized: "Japonês (Shift JIS)")),
+        ("euc-jp", String(localized: "Japonês (EUC)")), ("gb18030", String(localized: "Chinês Simplificado (GB 18030)")), ("big5", String(localized: "Chinês Tradicional (Big 5)")),
+        ("euc-kr", String(localized: "Coreano (EUC)")),
     ]
 
     /// "Amazon S3 with IAM Role" do Transmit + perfis da AWS CLI.
@@ -460,7 +460,7 @@ struct ConnectionFields: View {
     private var s3Advanced: some View {
         line
         GridRow {
-            label("Perfil AWS")
+            label(String(localized: "Perfil AWS"))
             Picker("", selection: Binding(get: { bookmark.awsProfile ?? "" }, set: { bookmark.awsProfile = $0.isEmpty ? nil : $0 })) {
                 Text("Nenhum (usar as chaves acima)").tag("")
                 ForEach(AWSProfiles.load().names, id: \.self) { Text($0).tag($0) }
@@ -517,7 +517,7 @@ struct ConnectionFields: View {
         let panel = NSOpenPanel()
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".ssh")
         panel.showsHiddenFiles = true
-        panel.prompt = "Usar Chave"
+        panel.prompt = String(localized: "Usar Chave")
         if panel.runModal() == .OK, let url = panel.url { bookmark.keyFile = url.path }
     }
 
@@ -525,7 +525,7 @@ struct ConnectionFields: View {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
-        panel.prompt = "Escolher"
+        panel.prompt = String(localized: "Escolher")
         if panel.runModal() == .OK, let url = panel.url { bookmark.localPath = url.path }
     }
 }

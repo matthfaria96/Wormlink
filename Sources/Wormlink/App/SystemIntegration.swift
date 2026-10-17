@@ -10,20 +10,20 @@ import WormlinkCore
         guard !files.isEmpty else { return }
         let bookmarks = BookmarkStore(fileURL: AppModel.currentStoreURL).load()
         guard !bookmarks.isEmpty else {
-            error.pointee = "Nenhum servidor salvo no Wormlink." as NSString
+            error.pointee = String(localized: "Nenhum servidor salvo no Wormlink.") as NSString
             return
         }
         NSApp.activate()
         let alert = NSAlert()
-        alert.messageText = files.count == 1 ? "Enviar “\(files[0].lastPathComponent)” para:" : "Enviar \(files.count) itens para:"
-        alert.informativeText = "Os arquivos vão para a pasta inicial do servidor."
+        alert.messageText = files.count == 1 ? String(localized: "Enviar “\(files[0].lastPathComponent)” para:") : String(localized: "Enviar \(files.count) itens para:")
+        alert.informativeText = String(localized: "Os arquivos vão para a pasta inicial do servidor.")
         let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26))
         for bookmark in bookmarks { popup.addItem(withTitle: bookmark.displayName) }
         if let last = UserDefaults.standard.string(forKey: "servicesLastBookmark"),
            let index = bookmarks.firstIndex(where: { $0.id.uuidString == last }) { popup.selectItem(at: index) }
         alert.accessoryView = popup
-        alert.addButton(withTitle: "Enviar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: String(localized: "Enviar"))
+        alert.addButton(withTitle: String(localized: "Cancelar"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let bookmark = bookmarks[popup.indexOfSelectedItem]
         UserDefaults.standard.set(bookmark.id.uuidString, forKey: "servicesLastBookmark")
@@ -80,8 +80,8 @@ enum CommandLineTool {
     static func install() {
         let alert = NSAlert()
         guard let tool = bundled else {
-            alert.messageText = "A ferramenta não está neste app"
-            alert.informativeText = "Use o Wormlink gerado pelo build-app.sh."
+            alert.messageText = String(localized: "A ferramenta não está neste app")
+            alert.informativeText = String(localized: "Use o Wormlink gerado pelo build-app.sh.")
             alert.runModal()
             return
         }
@@ -91,9 +91,9 @@ enum CommandLineTool {
         var error: NSDictionary?
         NSAppleScript(source: script)?.executeAndReturnError(&error)
         if let error, (error[NSAppleScript.errorNumber] as? Int) == -128 { return }   // cancelado
-        alert.messageText = error == nil ? "Ferramenta instalada" : "Não foi possível instalar"
+        alert.messageText = error == nil ? String(localized: "Ferramenta instalada") : String(localized: "Não foi possível instalar")
         alert.informativeText = error == nil
-            ? "Use “wormlink” no Terminal. Exemplos:\n  wormlink servidores\n  wormlink ls \"Meu Servidor:/pasta\"\n  wormlink put arquivo.zip \"Meu Servidor:/\""
+            ? String(localized: "Use “wormlink” no Terminal. Exemplos:\n  wormlink servidores\n  wormlink ls \"Meu Servidor:/pasta\"\n  wormlink put arquivo.zip \"Meu Servidor:/\"")
             : (error?[NSAppleScript.errorMessage] as? String ?? "")
         alert.runModal()
     }

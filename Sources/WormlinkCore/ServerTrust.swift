@@ -88,7 +88,7 @@ public enum CertificateTrustStore {
     static func evaluate(chain: [Data], host: String) -> CertificateChallenge? {
         let certs = chain.compactMap { SecCertificateCreateWithData(nil, $0 as CFData) }
         guard let leaf = certs.first else {
-            return CertificateChallenge(host: host, summary: "", fingerprint: "", reason: "O servidor não enviou certificado.")
+            return CertificateChallenge(host: host, summary: "", fingerprint: "", reason: String(localized: "O servidor não enviou certificado."))
         }
         var trust: SecTrust?
         SecTrustCreateWithCertificates(certs as CFArray, SecPolicyCreateSSL(true, host as CFString), &trust)
@@ -97,7 +97,7 @@ public enum CertificateTrustStore {
         let fp = fingerprint(chain[0])
         if isRemembered(host: host, fingerprint: fp) { return nil }
         let summary = (SecCertificateCopySubjectSummary(leaf) as String?) ?? host
-        let reason = (error.map { CFErrorCopyDescription($0) as String }) ?? "O certificado não é confiável."
+        let reason = (error.map { CFErrorCopyDescription($0) as String }) ?? String(localized: "O certificado não é confiável.")
         return CertificateChallenge(host: host, summary: summary, fingerprint: fp, reason: reason)
     }
 

@@ -225,7 +225,7 @@ public final class SwiftFileSystem: FileSystem {
 
     public func move(_ path: String, to newPath: String) async throws {
         guard let (container, object) = split(path), let (newContainer, newObject) = split(newPath), !object.isEmpty else {
-            throw WormlinkError.unsupportedOperation("Renomear contêineres")
+            throw WormlinkError.unsupportedOperation(String(localized: "Renomear contêineres"))
         }
         let children = try await allObjects(container, prefix: object + "/")
         let pairs = children.isEmpty ? [(object, newObject)] : children.map { ($0, newObject + "/" + $0.dropFirst(object.count + 1)) }
@@ -284,7 +284,7 @@ public final class SwiftFileSystem: FileSystem {
     }
 
     public func upload(_ local: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
-        guard let (container, object) = split(path), !object.isEmpty else { throw WormlinkError.unsupportedOperation("Enviar para a raiz") }
+        guard let (container, object) = split(path), !object.isEmpty else { throw WormlinkError.unsupportedOperation(String(localized: "Enviar para a raiz")) }
         var request = URLRequest(url: url(container: container, object: object))
         request.httpMethod = "PUT"
         request.setValue(token, forHTTPHeaderField: "X-Auth-Token")

@@ -107,7 +107,7 @@ extension WebDAVFileSystem: SharesLinks {
     /// OCS Share API: compartilhamento público (shareType 3).
     public func sharedLink(_ path: String) async throws -> URL {
         guard let inside = Self.nextcloudPath(path) else {
-            throw WormlinkError.unsupportedOperation("Links compartilhados (só Nextcloud e ownCloud)")
+            throw WormlinkError.unsupportedOperation(String(localized: "Links compartilhados (só Nextcloud e ownCloud)"))
         }
         var c = URLComponents(url: base, resolvingAgainstBaseURL: false)!
         c.path = "/ocs/v2.php/apps/files_sharing/api/v1/shares"

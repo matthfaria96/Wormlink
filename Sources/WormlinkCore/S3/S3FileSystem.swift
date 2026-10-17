@@ -294,7 +294,7 @@ public final class S3FileSystem: FileSystem {
     }
 
     public func upload(_ local: URL, to path: String, progress: @escaping @Sendable (Int64) -> Void) async throws {
-        guard let (bucket, key) = split(path), !key.isEmpty else { throw WormlinkError.unsupportedOperation("Enviar para a raiz") }
+        guard let (bucket, key) = split(path), !key.isEmpty else { throw WormlinkError.unsupportedOperation(String(localized: "Enviar para a raiz")) }
         let size = Int64((try? local.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         let region = try await region(of: bucket)
         if size <= Self.multipartThreshold {

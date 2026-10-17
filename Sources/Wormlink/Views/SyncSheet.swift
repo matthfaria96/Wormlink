@@ -40,7 +40,7 @@ struct SyncSheet: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            folderCard(source, role: "Origem")
+            folderCard(source, role: String(localized: "Origem"))
             Button {
                 leftToRight.toggle()
                 phase = .options
@@ -53,7 +53,7 @@ struct SyncSheet: View {
             .glassEffect(.regular.tint(Color.wormlink.opacity(0.35)).interactive(), in: .circle)
             .help("Inverter a direção")
             .disabled(phase != .options && phase != .preview)
-            folderCard(destination, role: "Destino")
+            folderCard(destination, role: String(localized: "Destino"))
         }
     }
 
@@ -136,7 +136,7 @@ struct SyncSheet: View {
         let updates = changes.filter { $0.kind == .update }.count
         let deletes = changes.filter { $0.kind == .delete }.count
         let bytes = changes.filter { selected.contains($0.id) }.reduce(0) { $0 + $1.size }
-        return "\(adds) novo(s), \(updates) alterado(s), \(deletes) para apagar — \(bytes.formatted(.byteCount(style: .file))) a transferir"
+        return String(localized: "\(adds) novo(s), \(updates) alterado(s), \(deletes) para apagar — \(bytes.formatted(.byteCount(style: .file))) a transferir")
     }
 
     private func icon(_ kind: SyncChange.Kind) -> String {
@@ -214,7 +214,7 @@ struct SyncSheet: View {
         guard let synchronizer, let source, let destination else { return }
         let chosen = changes.filter { selected.contains($0.id) }
         app.transfers.enqueueSync(chosen, with: synchronizer, sourceRoot: source.path, destinationRoot: destination.path,
-                                  title: "Sincronizar \(RemotePath.name(source.path))") { [destination] in
+                                  title: String(localized: "Sincronizar \(RemotePath.name(source.path))")) { [destination] in
             Task { await destination.reload() }
         }
         dismiss()

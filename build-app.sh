@@ -77,6 +77,7 @@ mkdir -p "$CONTENTS/Resources/Licenses"
 cp LICENSE THIRD_PARTY_NOTICES.md "$CONTENTS/Resources/Licenses/"
 cp Vendor/Citadel/LICENSE "$CONTENTS/Resources/Licenses/Citadel-LICENSE.txt"
 cp Vendor/swift-nio-ssh/LICENSE.txt "$CONTENTS/Resources/Licenses/swift-nio-ssh-LICENSE.txt"
+cp Vendor/swift-nio-ssl/LICENSE.txt "$CONTENTS/Resources/Licenses/swift-nio-ssl-LICENSE.txt"
 
 strip -x "$CONTENTS/MacOS/Wormlink" 2>/dev/null || true
 [ -f "$CONTENTS/PlugIns/WormlinkDisk.appex/Contents/MacOS/WormlinkDisk" ] && strip -x "$CONTENTS/PlugIns/WormlinkDisk.appex/Contents/MacOS/WormlinkDisk" 2>/dev/null || true

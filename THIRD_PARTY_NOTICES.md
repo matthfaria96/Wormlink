@@ -16,6 +16,7 @@ do Transmit é usado.
 |---|---|
 | Citadel (Joannis Orlandos) — cópia com patch em `Vendor/Citadel` | MIT |
 | swift-nio-ssh (Apple; fork Wellz26) — cópia com patch em `Vendor/swift-nio-ssh` | Apache 2.0 |
-| SwiftNIO, SwiftNIO SSL, swift-crypto, swift-log, swift-atomics, swift-collections, swift-system, swift-asn1 (Apple) | Apache 2.0 |
+| SwiftNIO SSL (Apple) — cópia com patch em `Vendor/swift-nio-ssl` | Apache 2.0 |
+| SwiftNIO, swift-crypto, swift-log, swift-atomics, swift-collections, swift-system, swift-asn1 (Apple) | Apache 2.0 |
 | BigInt (Károly Lőrentey) | MIT |
 | BoringSSL (Google), via swift-nio-ssl e swift-crypto | OpenSSL / ISC |

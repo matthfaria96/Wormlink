@@ -50,18 +50,24 @@ final class FTPConnection: @unchecked Sendable {
     private let replies: FTPReplyHandler
     private(set) var features: Set<String> = []
     private var protectedData = false
+    /// Um contexto TLS por conexão, compartilhado entre controle e dados: as conexões de dados retomam a sessão
+    /// do controle, o que vsftpd, ProFTPD e FileZilla Server exigem por padrão.
+    private let tls: NIOSSLContext?
 
-    private init(config: FTPConfig, channel: Channel, replies: FTPReplyHandler) {
+    private init(config: FTPConfig, channel: Channel, replies: FTPReplyHandler, tls: NIOSSLContext?) {
         self.config = config
         self.channel = channel
         self.replies = replies
+        self.tls = tls
     }
 
     static func tlsContext() throws -> NIOSSLContext {
         var configuration = TLSConfiguration.makeClientConfiguration()
         // A verificação (inclusive do nome do servidor) é feita pelo SecTrust em `CertificateTrustStore`.
         configuration.certificateVerification = .noHostnameVerification
-        return try NIOSSLContext(configuration: configuration)
+        let context = try NIOSSLContext(configuration: configuration)
+        context.clientSessionCache = NIOSSLClientSessionCache()
+        return context
     }
 
     /// NIOSSL não aceita IP como nome para SNI.
@@ -71,17 +77,18 @@ final class FTPConnection: @unchecked Sendable {
 
     static func open(_ config: FTPConfig) async throws -> FTPConnection {
         let replies = FTPReplyHandler(encoding: config.encoding)
-        let tls = config.security == .implicitTLS ? try tlsContext() : nil
+        let tls = config.security == .none ? nil : try tlsContext()
+        let implicit = config.security == .implicitTLS ? tls : nil
         let channel = try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
             .connectTimeout(.seconds(Int64(config.timeout)))
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    if let tls { try channel.pipeline.syncOperations.addHandler(config.tlsHandler(context: tls)) }
+                    if let implicit { try channel.pipeline.syncOperations.addHandler(config.tlsHandler(context: implicit)) }
                     try channel.pipeline.syncOperations.addHandler(replies)
                 }
             }
             .connect(host: config.host, port: config.port).get()
-        let connection = FTPConnection(config: config, channel: channel, replies: replies)
+        let connection = FTPConnection(config: config, channel: channel, replies: replies, tls: tls)
         do {
             try await connection.handshake()
         } catch {
@@ -95,7 +102,8 @@ final class FTPConnection: @unchecked Sendable {
         try await expect(await nextReply(), 220)
         if config.security == .explicitTLS {
             try await expect(await command("AUTH TLS"), 234)
-            let context = try Self.tlsContext(), config = config, channel = channel
+            guard let context = tls else { throw WormlinkError.invalidResponse }
+            let config = config, channel = channel
             try await channel.eventLoop.submit {
                 try channel.pipeline.syncOperations.addHandler(config.tlsHandler(context: context), position: .first)
             }.get()
@@ -194,7 +202,7 @@ final class FTPConnection: @unchecked Sendable {
                              _ body: (Channel, FTPDataSink) async throws -> T) async throws -> T {
         let sink = sink ?? FTPDataSink(handle: nil, progress: nil)
         let (host, port) = try await passiveAddress()
-        let tls = protectedData ? try Self.tlsContext() : nil
+        let tls = protectedData ? self.tls : nil
         let config = config
         let data = try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
             .connectTimeout(.seconds(Int64(config.timeout)))

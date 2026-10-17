@@ -55,7 +55,14 @@ private func bookmarks() -> [(String, Bookmark, String?)] {
         ("FTP-TLS", Bookmark(connectionProtocol: .ftps, hostname: "127.0.0.1", port: 2122, username: "wl"), "senha"),
         ("WebDAV", Bookmark(connectionProtocol: .webdav, hostname: "127.0.0.1", port: 8080, username: "wl"), "senha"),
         ("S3", s3, "WLSECRET1234"),
-    ] + azure() + swift() + smb()
+    ] + azure() + swift() + smb() + proftpd()
+}
+
+/// ProFTPD com mod_tls exigindo reaproveitamento da sessão TLS nos dados (o padrão dele e do vsftpd).
+/// WORMLINK_PROFTPD=<porta>, usuário wl / senha.
+private func proftpd() -> [(String, Bookmark, String?)] {
+    guard let port = ProcessInfo.processInfo.environment["WORMLINK_PROFTPD"].flatMap(Int.init) else { return [] }
+    return [("FTPS ProFTPD (reuso de sessão TLS)", Bookmark(connectionProtocol: .ftps, hostname: "127.0.0.1", port: port, username: "wl"), "senha")]
 }
 
 /// SMB via o cliente do macOS contra o impacket (smbserver.py, porta 4445, compartilhamento COMPARTILHADO).

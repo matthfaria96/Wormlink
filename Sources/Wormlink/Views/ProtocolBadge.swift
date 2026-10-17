@@ -80,6 +80,12 @@ struct ProtocolBadge: View {
         return style(base.symbol, colors.0, colors.1)
     }
 
+    /// O selo do que o favorito usa: o serviço pronto, se houver, ou o protocolo.
+    static func style(for bookmark: Bookmark) -> Style {
+        if let id = bookmark.preset, let preset = PresetStore.all.first(where: { $0.id == id }) { return style(for: preset) }
+        return style(for: bookmark.connectionProtocol)
+    }
+
     // MARK: Imagem para menus
 
     private static var cache: [Style: NSImage] = [:]

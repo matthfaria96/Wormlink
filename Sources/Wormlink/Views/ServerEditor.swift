@@ -99,10 +99,9 @@ struct QuickConnectView: View {
                         .onChange(of: address) { applyAddress() }
                 } header: {
                     VStack(spacing: 8) {
-                        Image(systemName: "bolt.horizontal.circle.fill")
-                            .font(.system(size: 48))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(.tint)
+                        // O selo do protocolo escolhido (muda junto com o menu ou a URL colada).
+                        ProtocolBadge(style: ProtocolBadge.style(for: slot.quickConnect.bookmark), size: 56)
+                            .animation(.snappy, value: slot.quickConnect.bookmark.connectionProtocol)
                         Text("Conexão rápida").font(.title3.weight(.semibold)).foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
@@ -232,8 +231,7 @@ struct ConnectionFields: View {
                     }
                 }
             } label: {
-                // O selo do protocolo escolhido, ao lado do rótulo (o menu fechado só mostra o nome).
-                Label { Text("Protocolo") } icon: { ProtocolBadge(style: currentBadge, size: 18) }
+                Text("Protocolo")
             }
             if proto == .ftp || proto == .ftps {
                 Toggle("Modo passivo", isOn: .constant(true))
@@ -406,14 +404,6 @@ struct ConnectionFields: View {
 
     private func optionalBinding(_ key: WritableKeyPath<Bookmark, String?>) -> Binding<String> {
         Binding(get: { bookmark[keyPath: key] ?? "" }, set: { bookmark[keyPath: key] = $0.isEmpty ? nil : $0 })
-    }
-
-    private var currentBadge: ProtocolBadge.Style {
-        let kind = kindBinding.wrappedValue
-        if kind.hasPrefix("preset:"), let preset = PresetStore.all.first(where: { "preset:" + $0.id == kind }) {
-            return ProtocolBadge.style(for: preset)
-        }
-        return ProtocolBadge.style(for: proto)
     }
 
     /// Protocolo puro ("proto:sftp") ou perfil de serviço ("preset:wasabi").

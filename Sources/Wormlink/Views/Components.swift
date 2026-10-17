@@ -6,8 +6,8 @@ extension Color {
     /// Verde do túnel do ícone (o mesmo da AccentColor do catálogo): mais escuro no claro, para ter contraste.
     static let wormlink = Color(nsColor: NSColor(name: "wormlink") { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0.298, green: 0.761, blue: 0.165, alpha: 1)
-            : NSColor(srgbRed: 0.180, green: 0.604, blue: 0.122, alpha: 1)
+            ? NSColor(srgbRed: 0.247, green: 0.651, blue: 0.137, alpha: 1)
+            : NSColor(srgbRed: 0.157, green: 0.522, blue: 0.106, alpha: 1)
     })
 }
 

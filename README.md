@@ -1,95 +1,97 @@
 # Wormlink
 
-Cliente de arquivos remotos para macOS 26+, em Swift/SwiftUI com Liquid Glass. Conecte. Explore. Transfira.
-Software livre sob a GPL-3 (veja `LICENSE` e `THIRD_PARTY_NOTICES.md`).
+**English** · [Português](README.pt-BR.md)
 
-- **Funcionalidades**: reimplementação em Swift do Cyberduck (clone de referência em `Reference/cyberduck`, fora do build).
-- **Design**: layout do Transmit (mapa em `../Clones/Transmit/SPEC.md`): dois lados, Places, servidores com ícones, Quick Connect, editor de servidor no painel, inspetor.
+A remote file client for macOS 26+, built in Swift/SwiftUI with Liquid Glass. Connect. Explore. Transfer.
+Free software under the GPL-3 (see `LICENSE` and `THIRD_PARTY_NOTICES.md`).
 
-## Compilar e testar
+- **Features**: a Swift reimplementation of Cyberduck (reference clone in `Reference/cyberduck`, outside the build).
+- **Design**: Transmit's layout (map in `../Clones/Transmit/SPEC.md`): two sides, Places, servers with icons, Quick Connect, in-pane server editor, inspector.
+
+## Build and test
 
 ```sh
-./build-app.sh            # build/Wormlink.app (universal, assinatura ad hoc)
-./build-app.sh --install  # e copia para /Applications
+./build-app.sh            # build/Wormlink.app (universal, ad hoc signature)
+./build-app.sh --install  # and copies it to /Applications
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 ```
 
-Os testes de integração rodam contra servidores locais. Cada variável liga um grupo de testes:
+The integration tests run against local servers. Each variable turns on a group of tests:
 
 ```sh
-scripts/test-servers/start.sh /tmp/wormlink-servers     # SFTP, FTP/FTPS, WebDAV e S3 (outro terminal)
+scripts/test-servers/start.sh /tmp/wormlink-servers     # SFTP, FTP/FTPS, WebDAV and S3 (another terminal)
 WORMLINK_SERVERS=/tmp/wormlink-servers \
 WORMLINK_AZURITE=1 WORMLINK_SWIFT=1 WORMLINK_SMB=1 WORMLINK_KBDINT=1 \
-WORMLINK_MOTO=127.0.0.1:5055 WORMLINK_AGENT=/caminho/do/ssh-agent.sock WORMLINK_BONJOUR=1 \
-WORMLINK_PYCRYPTOMATOR=/caminho/venv/bin/python \
+WORMLINK_MOTO=127.0.0.1:5055 WORMLINK_AGENT=/path/to/ssh-agent.sock WORMLINK_BONJOUR=1 \
+WORMLINK_PYCRYPTOMATOR=/path/to/venv/bin/python \
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 ```
 
-`WORMLINK_PYCRYPTOMATOR` aponta para um Python com `pip install pycryptomator`: o teste de cofres cria e lê cofres nos dois sentidos para conferir a compatibilidade com outra implementação.
+`WORMLINK_PYCRYPTOMATOR` points to a Python with `pip install pycryptomator`: the vault test creates and reads vaults both ways to check compatibility with another implementation.
 
-Traduções: o português é a língua de origem e `Resources/en.lproj` traz o inglês. `scripts/check-translations.sh` lista os textos novos ainda sem tradução.
+Translations: Portuguese is the source language and `Resources/en.lproj` holds English. `scripts/check-translations.sh` lists new strings that still lack a translation.
 
-Em compilações de depuração, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` abre essas telas direto (para capturas).
+In debug builds, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` opens those screens directly (for screenshots).
 
-## Protocolos
+## Protocols
 
-| Protocolo | Implementação |
+| Protocol | Implementation |
 |---|---|
-| SFTP | Citadel + SwiftNIO SSH (com patches). Chaves Ed25519, ECDSA e RSA (`rsa-sha2-512`), agente SSH, `~/.ssh/config` com ProxyJump, keyboard-interactive (2FA). Verifica `known_hosts` (inclusive em hash). Leituras e escritas em paralelo. |
-| FTP / FTPS | SwiftNIO + NIOSSL. TLS explícito ou implícito, EPSV/PASV, MLSD ou LIST (Unix e Windows), REST/APPE, MFMT, checksums HASH/XSHA256/XMD5. Por servidor: codificação dos nomes, MLSD, tempo limite e modo ASCII por extensão. |
-| WebDAV | URLSession: PROPFIND, MKCOL, MOVE, DELETE, GET e PUT, com Basic e Digest. Nextcloud e ownCloud prontos. |
-| S3 | SigV4, perfis da AWS CLI, AssumeRole com MFA, região por bucket, multipart, compatíveis (Wasabi, R2, B2, Spaces…). URL assinada, ACL, classe, criptografia, metadados, versões, Requester Pays, Transfer Acceleration, ciclo de vida e CloudFront. |
-| SMB | Cliente SMB do macOS (NetFS), montado numa pasta privada. Reaproveita compartilhamentos que já estão montados. |
-| Azure Blob, OpenStack Swift, Backblaze B2 | Chave compartilhada/SAS, Keystone v3/v2/TempAuth, API S3 do B2. |
-| Dropbox, Google Drive, OneDrive, SharePoint, Box | OAuth com PKCE (o Client ID de cada provedor vai em Ajustes › Nuvens). |
+| SFTP | Citadel + SwiftNIO SSH (patched). Ed25519, ECDSA and RSA (`rsa-sha2-512`) keys, SSH agent, `~/.ssh/config` with ProxyJump, keyboard-interactive (2FA). Checks `known_hosts` (hashed too). Parallel reads and writes. |
+| FTP / FTPS | SwiftNIO + NIOSSL. Explicit or implicit TLS, EPSV/PASV, MLSD or LIST (Unix and Windows), REST/APPE, MFMT, HASH/XSHA256/XMD5 checksums. Per server: name encoding, MLSD, timeout and ASCII mode by extension. |
+| WebDAV | URLSession: PROPFIND, MKCOL, MOVE, DELETE, GET and PUT, with Basic and Digest. Nextcloud and ownCloud ready. |
+| S3 | SigV4, AWS CLI profiles, AssumeRole with MFA, per-bucket region, multipart, compatibles (Wasabi, R2, B2, Spaces…). Signed URL, ACL, storage class, encryption, metadata, versions, Requester Pays, Transfer Acceleration, lifecycle and CloudFront. |
+| SMB | The macOS SMB client (NetFS), mounted in a private folder. Reuses shares that are already mounted. |
+| Azure Blob, OpenStack Swift, Backblaze B2 | Shared key/SAS, Keystone v3/v2/TempAuth, B2's S3 API. |
+| Dropbox, Google Drive, OneDrive, SharePoint, Box | OAuth with PKCE (each provider's Client ID goes in Settings › Clouds). |
 
-Certificados TLS não confiáveis (FTPS, WebDAV) passam pelo SecTrust do sistema. Se o usuário aceitar um, ele fica lembrado.
+Untrusted TLS certificates (FTPS, WebDAV) go through the system's SecTrust. If the user accepts one, it is remembered.
 
-## Recursos
+## Features
 
-- **Navegação**: dois lados (Mac ↔ servidor ou servidor ↔ servidor) e abas (⌘T). Lista com subpastas expansíveis e modo ícones. Places por servidor (arraste pastas para a barra). Folder Linking.
-- **Transferências**: arraste entre os lados ou do Finder, com fila, progresso e cancelamento.
-- **Arquivos**: editar arquivos remotos em app externo, com reenvio ao salvar. Visualização Rápida (espaço) e Obter Informações com permissões. Copiar URL a partir da URL raiz. Abrir no Terminal, inclusive via SSH.
-- **Servidores**: importação de favoritos `.duck` do Cyberduck. Senhas no Chaves, compartilhadas com o Cyberduck. Histórico e o link `wormlink://bookmark/<id>`.
+- **Browsing**: two sides (Mac ↔ server or server ↔ server) and tabs (⌘T). A list with expandable subfolders and an icon mode. Places per server (drag folders onto the bar). Folder Linking.
+- **Transfers**: drag between the sides or from Finder, with a queue, progress and cancelling.
+- **Files**: edit remote files in an external app, re-uploaded on save. Quick Look (space) and Get Info with permissions. Copy URL from the root URL. Open in Terminal, including over SSH.
+- **Servers**: import of Cyberduck `.duck` bookmarks. Passwords in the Keychain, shared with Cyberduck. History and the `wormlink://bookmark/<id>` link.
 
-## Estrutura
+## Layout
 
-- `Sources/WormlinkCore`: protocolos, favoritos, confiança (SSH/TLS) e cópia entre sistemas de arquivos.
-- `Sources/Wormlink`: app SwiftUI (`MainWindow`, `FilesPane`, `ServersPane`, `ServerEditor`, `InspectorView`).
-- `Vendor/`: Citadel e swift-nio-ssh com patches de RSA SHA-2 (veja `Vendor/README.md`).
-- `Resources/AppIcon.icon`: ícone do Icon Composer; a camada de arte é gerada de `Resources/AppIcon-source.png` por `scripts/make-icon-art.swift`.
+- `Sources/WormlinkCore`: protocols, bookmarks, trust (SSH/TLS) and copying between file systems.
+- `Sources/Wormlink`: SwiftUI app (`MainWindow`, `FilesPane`, `ServersPane`, `ServerEditor`, `InspectorView`).
+- `Vendor/`: Citadel and swift-nio-ssh with RSA SHA-2 patches (see `Vendor/README.md`).
+- `Resources/AppIcon.icon`: Icon Composer icon; the art layer is generated from `Resources/AppIcon-source.png` by `scripts/make-icon-art.swift`.
 
-## Novidades (fases 1–8)
+## What's new (phases 1–8)
 
-- **Sincronização** com prévia das mudanças, apagar órfãos, critério de comparação, diferença de fuso e regras para ignorar arquivos.
-- **Transferências**: retomada, pergunta quando o arquivo já existe, limite de simultâneas, "tentar de novo", velocidade e tempo restante, datas preservadas e notificações.
-- **Transcript**: janela com o log do protocolo, aberta com ⇧⌘L.
-- **SSH**: chaves com frase secreta, guardada no Chaves.
-- **Servidores**: grupos e sincronização dos favoritos pelo iCloud Drive.
-- **Editor de texto embutido**, com detecção de codificação.
-- **Droplets** e o esquema `wormlink://bookmark|upload|mount`.
-- **Atalhos**: ações de Enviar, Baixar, Sincronizar e Abrir Servidor (os metadados são gerados no `build-app.sh`).
-- **Nuvens**: Dropbox, Google Drive e OneDrive (OAuth com PKCE; o Client ID de cada provedor vai em Ajustes › Nuvens).
-- **Wormlink Disk**: extensão File Provider que monta servidores no Finder. É preciso ativá-la uma vez em Ajustes do Sistema.
+- **Sync** with a preview of the changes, deleting orphans, comparison criteria, time zone offset and rules to ignore files.
+- **Transfers**: resume, a question when the file already exists, a limit on simultaneous transfers, "try again", speed and time remaining, preserved dates and notifications.
+- **Transcript**: a window with the protocol log, opened with ⇧⌘L.
+- **SSH**: keys with a passphrase, kept in the Keychain.
+- **Servers**: groups and bookmark sync through iCloud Drive.
+- **Built-in text editor**, with encoding detection.
+- **Droplets** and the `wormlink://bookmark|upload|mount` scheme.
+- **Shortcuts**: Upload, Download, Sync and Open Server actions (the metadata is generated in `build-app.sh`).
+- **Clouds**: Dropbox, Google Drive and OneDrive (OAuth with PKCE; each provider's Client ID goes in Settings › Clouds).
+- **Wormlink Disk**: a File Provider extension that mounts servers in Finder. It has to be turned on once in System Settings.
 
-## Novidades (etapas 1–4)
+## What's new (stages 1–4)
 
-- **Bonjour**: servidores SFTP, FTP, WebDAV e SMB da rede local aparecem sozinhos no grupo "Bonjour".
-- **Importar e exportar**: servidores do Cyberduck, Transmit, FileZilla e WinSCP; backup `.wormlinkservers` (senhas opcionais).
-- **Chaves SSH** (Ajustes › Chaves): listar, gerar, importar, copiar a pública e "Instalar Chave Pública no Servidor…".
-- **Ajustes por servidor** (editor › Avançado): tempo limite, codificação, MLSD, modo ASCII, notas e padrões S3.
-- **S3 no Obter Informações**: link temporário (1 h, 1 dia, 7 dias), classe, criptografia, acesso, metadados e versões (restaurar e baixar). No bucket: versionamento, Requester Pays, aceleração, ciclo de vida e CloudFront (criar, invalidar, ligar e desligar).
-- **Visualizações**: lista, ícones, colunas e galeria (⌘1–⌘4). Um painel ou dois (⌘\).
-- **Links compartilhados**: "Copiar Link Compartilhado" no Dropbox, Google Drive, OneDrive/SharePoint, Box e Nextcloud/ownCloud (API OCS). Quem já tinha entrado no Dropbox precisa entrar de novo para dar a permissão de compartilhamento.
-- **Linha de comando**: `wormlink` (em `Contents/SharedSupport/bin`, instalável pelo menu Wormlink). Comandos `servidores`, `ls`, `get`, `put`, `cat`, `mkdir`, `rm`, `mv` e `link`, com os servidores e senhas do app.
-- **AppleScript**: `server names`, `connect`, `list`, `upload` e `download`.
-- **Sistema**: serviço do Finder "Enviar com o Wormlink…", servidores no Spotlight e Handoff da pasta aberta (o Handoff entre Macs exige assinatura com Team ID).
+- **Bonjour**: SFTP, FTP, WebDAV and SMB servers on the local network show up on their own in the "Bonjour" group.
+- **Import and export**: servers from Cyberduck, Transmit, FileZilla and WinSCP; `.wormlinkservers` backup (passwords optional).
+- **SSH keys** (Settings › Keys): list, generate, import, copy the public key and "Install Public Key on Server…".
+- **Per-server settings** (editor › Advanced): timeout, encoding, MLSD, ASCII mode, notes and S3 defaults.
+- **S3 in Get Info**: temporary link (1 h, 1 day, 7 days), storage class, encryption, access, metadata and versions (restore and download). On the bucket: versioning, Requester Pays, acceleration, lifecycle and CloudFront (create, invalidate, turn on and off).
+- **Views**: list, icons, columns and gallery (⌘1–⌘4). One pane or two (⌘\).
+- **Shared links**: "Copy Shared Link" on Dropbox, Google Drive, OneDrive/SharePoint, Box and Nextcloud/ownCloud (OCS API). Anyone already signed in to Dropbox needs to sign in again to grant the sharing permission.
+- **Command line**: `wormlink` (in `Contents/SharedSupport/bin`, installable from the Wormlink menu). Commands `servidores`, `ls`, `get`, `put`, `cat`, `mkdir`, `rm`, `mv` and `link`, with the app's servers and passwords.
+- **AppleScript**: `server names`, `connect`, `list`, `upload` and `download`.
+- **System**: the Finder service "Send with Wormlink…", servers in Spotlight and Handoff of the open folder (Handoff between Macs requires signing with a Team ID).
 
-## Novidades (etapa 5)
+## What's new (stage 5)
 
-- **Inglês**: a interface segue o idioma do sistema (português ou inglês).
-- **Cofres do Cryptomator** (formato 8, e 7 para leitura e escrita): ao abrir a pasta de um cofre aparece "Desbloquear…". Lá dentro os nomes e o conteúdo são cifrados e decifrados na hora, em qualquer protocolo. "Novo Cofre Criptografado…" (Arquivo ou menu do painel) cria um cofre compatível com o Cryptomator e o Cyberduck. A senha pode ficar no Chaves.
+- **English**: the interface follows the system language (Portuguese or English).
+- **Cryptomator vaults** (format 8, and 7 for reading and writing): opening a vault's folder shows "Unlock…". Inside, names and contents are encrypted and decrypted on the fly, on any protocol. "New Encrypted Vault…" (File or the pane menu) creates a vault compatible with Cryptomator and Cyberduck. The password can be kept in the Keychain.
 
-## Fora do alcance sem conta Apple Developer
+## Out of reach without an Apple Developer account
 
-Notarização com Developer ID e atualização automática (Sparkle precisa de um feed hospedado e de chaves de assinatura).
+Notarization with a Developer ID and automatic updates (Sparkle needs a hosted feed and signing keys).

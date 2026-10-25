@@ -685,3 +685,9 @@
 "Perfil de Conexão do Cyberduck…" = "Cyberduck Connection Profile…";
 "Endereço de retorno" = "Redirect address";
 "Cada nuvem exige um app gratuito cadastrado no provedor, com este endereço de retorno." = "Each cloud needs a free app registered with the provider, using this redirect address.";
+"/www/projeto" = "/www/project";
+"http://www.servidor.com/projeto" = "http://www.server.com/project";
+"/meu-bucket" = "/my-bucket";
+"/meu-conteiner" = "/my-container";
+"/Documentos" = "/Documents";
+"projeto:usuário" = "project:user";

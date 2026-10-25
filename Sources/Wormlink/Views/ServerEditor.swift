@@ -161,7 +161,7 @@ struct FieldSpec {
     var hostLabel = String(localized: "Endereço"), hostPrompt = String(localized: "servidor.com"), showHost = true, showPort = true
     var userLabel = String(localized: "Usuário"), userPrompt = String(localized: "usuário"), showCredentials = true
     var passwordLabel = String(localized: "Senha"), passwordPrompt = String(localized: "senha")
-    var pathLabel = String(localized: "Caminho remoto"), pathPrompt = "/www/projeto"
+    var pathLabel = String(localized: "Caminho remoto"), pathPrompt = String(localized: "/www/projeto")
     var note: String?
 
     init(_ bookmark: Bookmark) {
@@ -170,24 +170,24 @@ struct FieldSpec {
             hostLabel = "Endpoint"; hostPrompt = "s3.amazonaws.com"
             userLabel = "Access Key ID"; userPrompt = String(localized: "AKIA… (ou use um perfil AWS)")
             passwordLabel = "Secret Key"; passwordPrompt = String(localized: "secret access key")
-            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = "/meu-bucket"
+            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = String(localized: "/meu-bucket")
         case .b2:
             showHost = false; showPort = false
             userLabel = "Key ID"; userPrompt = String(localized: "keyID da Application Key")
             passwordLabel = "Application Key"; passwordPrompt = "applicationKey"
-            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = "/meu-bucket"
+            pathLabel = String(localized: "Bucket/pasta"); pathPrompt = String(localized: "/meu-bucket")
         case .azure:
             hostPrompt = "<conta>.blob.core.windows.net (opcional)"; showPort = false
             userLabel = String(localized: "Conta"); userPrompt = String(localized: "nome da conta de armazenamento")
             passwordLabel = String(localized: "Chave ou SAS"); passwordPrompt = String(localized: "chave de acesso ou token SAS")
-            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = "/meu-conteiner"
+            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = String(localized: "/meu-conteiner")
         case .swift:
             hostLabel = String(localized: "Autenticação"); hostPrompt = "identity.servidor.com"
-            userPrompt = "projeto:usuário"; passwordPrompt = String(localized: "senha ou API key")
-            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = "/meu-conteiner"
+            userPrompt = String(localized: "projeto:usuário"); passwordPrompt = String(localized: "senha ou API key")
+            pathLabel = String(localized: "Contêiner/pasta"); pathPrompt = String(localized: "/meu-conteiner")
         case .smb:
             userPrompt = String(localized: "usuário (vazio = convidado)")
-            pathLabel = String(localized: "Compartilhamento"); pathPrompt = "/Documentos"
+            pathLabel = String(localized: "Compartilhamento"); pathPrompt = String(localized: "/Documentos")
         case .sharePoint:
             hostLabel = "Site"; hostPrompt = "empresa.sharepoint.com"; showPort = false; showCredentials = false
             pathLabel = String(localized: "Caminho do site"); pathPrompt = "/sites/Equipe"
@@ -301,7 +301,7 @@ struct ConnectionFields: View {
 
         Section {
             if showPaths && proto != .sharePoint {
-                field(String(localized: "URL raiz"), prompt: "http://www.servidor.com/projeto", text: optionalBinding(\.webURL))
+                field(String(localized: "URL raiz"), prompt: String(localized: "http://www.servidor.com/projeto"), text: optionalBinding(\.webURL))
             }
             field(spec.pathLabel, prompt: spec.pathPrompt, text: $bookmark.path)
             if showPaths {

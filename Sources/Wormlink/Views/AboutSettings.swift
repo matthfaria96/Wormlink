@@ -9,7 +9,7 @@ struct AboutSettings: View {
 
     private var version: String {
         let info = Bundle.main.infoDictionary
-        let marketing = info?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+        let marketing = info?["CFBundleShortVersionString"] as? String ?? "0.2.0"
         let build = info?["CFBundleVersion"] as? String ?? "1"
         return String(localized: "Versão \(marketing) (\(build))")
     }

@@ -8,6 +8,22 @@ Software livre sob a GPL-3 (veja `LICENSE` e `THIRD_PARTY_NOTICES.md`).
 - **Funcionalidades**: reimplementação em Swift do Cyberduck (clone de referência em `Reference/cyberduck`, fora do build).
 - **Design**: layout do Transmit (mapa em `../Clones/Transmit/SPEC.md`): dois lados, Places, servidores com ícones, Quick Connect, editor de servidor no painel, inspetor.
 
+## Instalar
+
+1. Baixe o `Wormlink-<versão>.dmg` em [Releases](../../releases) ou em https://witchmymac.com.
+2. Abra o DMG e arraste o **Wormlink** para Aplicativos.
+3. O app não é notarizado, então o macOS o bloqueia na primeira vez. Para liberar, cole isto no Terminal:
+
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/Wormlink.app"
+   ```
+
+   Isso só remove a marca de "baixado da internet" deste app.
+
+   Sem o Terminal: abra o app, clique em OK no aviso e depois vá em Ajustes do Sistema › Privacidade e Segurança e clique em **Abrir Mesmo Assim**.
+
+Requer macOS 26 ou posterior.
+
 ## Compilar e testar
 
 ```sh

@@ -69,7 +69,7 @@ final class PaneModel: Identifiable {
     /// Os itens são arquivos de verdade neste Mac (dentro de um cofre não são).
     var isLocal: Bool { fs is LocalFileSystem }
     var isLocalConnection: Bool { base is LocalFileSystem }
-    var title: String { isLocalConnection ? Host.current().localizedName ?? String(localized: "Este Mac") : base.title }
+    var title: String { isLocalConnection ? LocalNames.mac ?? String(localized: "Este Mac") : base.title }
 
     func vault(at path: String) -> CryptomatorFileSystem? { vaults.first { $0.contains(path) } }
     var canGoBack: Bool { !back.isEmpty }

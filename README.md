@@ -49,7 +49,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 
 Translations: Portuguese is the source language and `Resources/en.lproj` holds English. `scripts/check-translations.sh` lists new strings that still lack a translation.
 
-In debug builds, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` opens those screens directly (for screenshots).
+In debug builds, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` opens those screens directly (for screenshots). `WORMLINK_PREVIEW_MAC_NAME` and `WORMLINK_PREVIEW_USER` replace this Mac's name and the user name shown in the panes, so screenshots carry no personal data.
 
 ## Protocols
 

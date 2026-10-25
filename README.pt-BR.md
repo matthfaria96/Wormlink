@@ -49,7 +49,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 
 Traduções: o português é a língua de origem e `Resources/en.lproj` traz o inglês. `scripts/check-translations.sh` lista os textos novos ainda sem tradução.
 
-Em compilações de depuração, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` abre essas telas direto (para capturas).
+Em compilações de depuração, `WORMLINK_PREVIEW=editor|quick|password|search|settings|transfers|bonjour|columns|gallery|single|inspector|vault .build/debug/Wormlink` abre essas telas direto (para capturas). `WORMLINK_PREVIEW_MAC_NAME` e `WORMLINK_PREVIEW_USER` trocam o nome deste Mac e o do usuário mostrados nos painéis, para capturas sem dados pessoais.
 
 ## Protocolos
 

@@ -82,7 +82,7 @@ struct GenerateKeySheet: View {
     @State private var type = SSHKeyManager.KeyType.ed25519
     @State private var name = "id_ed25519"
     @State private var passphrase = ""
-    @State private var comment = NSUserName() + "@" + (Host.current().localizedName ?? "Mac")
+    @State private var comment = LocalNames.user + "@" + (LocalNames.mac ?? "Mac")
     @State private var error: String?
 
     var body: some View {

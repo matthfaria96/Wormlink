@@ -411,7 +411,7 @@ struct PlacesBar: View {
     }
 
     private func placeName(_ place: String) -> String {
-        if pane.isLocalConnection && place == FileManager.default.homeDirectoryForCurrentUser.path { return NSUserName() }
+        if pane.isLocalConnection && place == FileManager.default.homeDirectoryForCurrentUser.path { return LocalNames.user }
         return place == "/" ? "/" : RemotePath.name(place)
     }
 
@@ -462,7 +462,7 @@ struct LocationMenu: View {
         Menu {
             Button {
                 Task { await window.showLocal(slot) }
-            } label: { Label(Host.current().localizedName ?? String(localized: "Este Mac"), systemImage: "desktopcomputer") }
+            } label: { Label(LocalNames.mac ?? String(localized: "Este Mac"), systemImage: "desktopcomputer") }
             Button {
                 slot.showingServers = true
             } label: { Label("Servidores", systemImage: "globe") }

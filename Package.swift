@@ -16,6 +16,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.99.0"),
         .package(path: "Vendor/swift-nio-ssl"),   // cópia com retomada de sessão TLS (FTPS)
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
+        // MIT. Atualizações dentro do app (feed em witchmymac.com/appcast/wormlink.xml).
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.0"),
     ],
     targets: [
         .target(
@@ -33,7 +35,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "Wormlink",
-            dependencies: ["WormlinkCore"],
+            dependencies: ["WormlinkCore", .product(name: "Sparkle", package: "Sparkle")],
             swiftSettings: [.defaultIsolation(MainActor.self)]
         ),
         // Extensão File Provider (Wormlink Disk). O build-app.sh embala o binário num .appex.

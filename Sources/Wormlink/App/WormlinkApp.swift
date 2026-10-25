@@ -69,6 +69,7 @@ struct WormlinkCommands: Commands {
                 UserDefaults.standard.set("about", forKey: "settingsTab")
                 openSettings()
             }
+            CheckForUpdatesButton()
         }
         CommandGroup(after: .newItem) {
             Button("Nova Aba") {
@@ -162,6 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.servicesProvider = services
         NSUpdateDynamicServices()
+        AppUpdater.shared.start()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

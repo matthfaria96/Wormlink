@@ -112,4 +112,8 @@ Untrusted TLS certificates (FTPS, WebDAV) go through the system's SecTrust. If t
 
 ## Out of reach without an Apple Developer account
 
-Notarization with a Developer ID and automatic updates (Sparkle needs a hosted feed and signing keys).
+Notarization with a Developer ID.
+
+## Updates
+
+Since 0.2.1, Wormlink updates itself with Sparkle: Wormlink › Check for Updates… (also in Settings › About), plus a daily check. The feed is `https://witchmymac.com/appcast/wormlink.xml`; versions are signed with the witchmymac EdDSA key. Older versions need 0.2.1 installed by hand once.

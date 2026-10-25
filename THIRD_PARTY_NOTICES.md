@@ -19,4 +19,5 @@ do Transmit é usado.
 | SwiftNIO SSL (Apple) — cópia com patch em `Vendor/swift-nio-ssl` | Apache 2.0 |
 | SwiftNIO, swift-crypto, swift-log, swift-atomics, swift-collections, swift-system, swift-asn1 (Apple) | Apache 2.0 |
 | BigInt (Károly Lőrentey) | MIT |
+| Sparkle (Andy Matuschak e colaboradores) — atualizações dentro do app, `Contents/Frameworks/Sparkle.framework` | MIT |
 | BoringSSL (Google), via swift-nio-ssl e swift-crypto | OpenSSL / ISC |

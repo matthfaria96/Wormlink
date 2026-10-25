@@ -80,6 +80,13 @@ cp Vendor/swift-nio-ssh/LICENSE.txt "$CONTENTS/Resources/Licenses/swift-nio-ssh-
 cp Vendor/swift-nio-ssl/LICENSE.txt "$CONTENTS/Resources/Licenses/swift-nio-ssl-LICENSE.txt"
 
 strip -x "$CONTENTS/MacOS/Wormlink" 2>/dev/null || true
+
+# Sparkle (atualizações dentro do app), com os serviços XPC dele, achado pelo rpath.
+mkdir -p "$CONTENTS/Frameworks"
+cp -R "$(dirname "$BIN")/Sparkle.framework" "$CONTENTS/Frameworks/"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$CONTENTS/MacOS/Wormlink" 2>/dev/null || true
+codesign --force --options runtime --sign - "$CONTENTS/Frameworks/Sparkle.framework"
+cp .build/checkouts/Sparkle/LICENSE "$CONTENTS/Resources/Licenses/Sparkle-LICENSE.txt" 2>/dev/null || true
 [ -f "$CONTENTS/PlugIns/WormlinkDisk.appex/Contents/MacOS/WormlinkDisk" ] && strip -x "$CONTENTS/PlugIns/WormlinkDisk.appex/Contents/MacOS/WormlinkDisk" 2>/dev/null || true
 [ -d "$CONTENTS/PlugIns/WormlinkDisk.appex" ] && \
   codesign --force --options runtime --entitlements Resources/Disk/Disk.entitlements --sign - "$CONTENTS/PlugIns/WormlinkDisk.appex"

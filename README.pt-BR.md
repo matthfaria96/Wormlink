@@ -112,4 +112,8 @@ Certificados TLS não confiáveis (FTPS, WebDAV) passam pelo SecTrust do sistema
 
 ## Fora do alcance sem conta Apple Developer
 
-Notarização com Developer ID e atualização automática (Sparkle precisa de um feed hospedado e de chaves de assinatura).
+Notarização com Developer ID.
+
+## Atualizações
+
+Desde a 0.2.1, o Wormlink se atualiza pelo Sparkle: Wormlink › Verificar Atualizações… (também em Ajustes › Sobre), além de uma verificação diária. O feed é `https://witchmymac.com/appcast/wormlink.xml`; as versões são assinadas com a chave EdDSA do witchmymac. Quem está numa versão anterior instala a 0.2.1 à mão uma vez.

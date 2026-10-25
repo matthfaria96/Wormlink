@@ -53,6 +53,10 @@ struct AboutSettings: View {
                         .font(.system(size: 12))
                 }
                 .padding(.top, 10)
+
+                CheckForUpdatesButton()
+                    .controlSize(.regular)
+                    .padding(.top, 18)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 36)
@@ -129,6 +133,20 @@ private struct LicensesSheet: View {
               text: "Copyright (c) iterate GmbH\nhttps://cyberduck.io\n\nProtocol behavior and bookmark formats were reimplemented in Swift from Cyberduck.\n\n" + gpl),
         Entry(name: "Citadel", license: "MIT License",
               text: "Copyright (c) 2022 Orlandos\n\n" + mit),
+        Entry(name: "Sparkle", license: "MIT License",
+              text: """
+              Copyright (c) 2006-2013 Andy Matuschak.
+              Copyright (c) 2009-2013 Elgato Systems GmbH.
+              Copyright (c) 2011-2014 Kornel Lesiński.
+              Copyright (c) 2015-2017 Mayur Pawashe.
+              Copyright (c) 2014 C.W. Betts.
+              Copyright (c) 2014 Petroules Corporation.
+              Copyright (c) 2014 Big Nerd Ranch.
+              All rights reserved.
+              https://sparkle-project.org
+
+
+              """ + mit + "\n\nSparkle also bundles third-party code under its own licenses: https://github.com/sparkle-project/Sparkle/blob/2.x/LICENSE"),
         Entry(name: "BigInt", license: "MIT License",
               text: "Copyright (c) 2016-2017 Károly Lőrentey\n\n" + mit),
         Entry(name: "SwiftNIO, SwiftNIO SSH, SwiftNIO SSL", license: "Apache License 2.0",
